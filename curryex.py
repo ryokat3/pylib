@@ -64,22 +64,30 @@ def curryex(*args, **kwargs):
 # reader
 ########################################################################
 
-def readerex(func, *args, **kwargs):
-    def recv_args(*_args):
+class ReaderEx(CurryEx):
+
+    def __call__(self, *_args):
         def recv_state(_state):
-            return CurryEx(func, *args, **kwargs)(args=_args, state=_state)
+            return super(ReaderEx, self).__call__(args=_args, state=_state)
         return recv_state
-    return recv_args 
 
-def args_(idx):
-    def _(args):
-        return args[idx]
-    return CurryEx(_, CurryEx.Arg('args'))
+    @classmethod
+    def args(cls, idx):
+        def _(ary):
+            return ary[idx]
+        return CurryEx(_, CurryEx.Arg('args'))
 
-def state_(key):
-    def _(state):
-        return state[key]
-    return CurryEx(_, CurryEx.Arg('state'))
+    @classmethod
+    def state(cls, key):
+        def _(dic):
+            return dic[key]
+        return CurryEx(_, CurryEx.Arg('state'))
+
+
+def readerex(*args, **kwargs):
+    def decorator(func):
+        return ReaderEx(func, *args, **kwargs)
+    return decorator 
 
 
 
@@ -146,19 +154,41 @@ class CurryExTest(unittest.TestCase):
 
 class ReaderExTest(unittest.TestCase):
 
-    def test_reader(self):
+    def test_ReadeEx(self):
     
-        _0 = args_(0)
-        _1 = args_(1)
-        _hehe = state_('hehe')
-        _hoho = state_('hoho')
+        _0 = ReaderEx.args(0)
+        _1 = ReaderEx.args(1)
+        _hehe = ReaderEx.state('hehe')
+        _hoho = ReaderEx.state('hoho')
 
-        add_ = readerex(operator.add, _0, _hehe)
-        sub_ = readerex(operator.sub, _hoho, _0)
+        add_ = ReaderEx(operator.add, _0, _hehe)
+        sub_ = ReaderEx(operator.sub, _hoho, _0)
 
         func = unit(Reader, 1) >> add_ >> sub_
 
         self.assertEqual(func( { 'hehe': 2, 'hoho': 10 } ), 7)
+        self.assertEqual(func( { 'hehe': 20, 'hoho': 100 } ), 79)
+
+
+    def test_ReadeEx_decorator(self):
+
+        _0 = ReaderEx.args(0)
+        _1 = ReaderEx.args(1)
+        _hehe = ReaderEx.state('hehe')
+        _hoho = ReaderEx.state('hoho')
+
+        @readerex(_0, _hehe)
+        def add(a, b):
+            return a + b
+
+        @readerex(_hoho, _0)
+        def sub(a, b):
+            return a - b
+
+        func = unit(Reader, 1) >> add >> sub
+
+        self.assertEqual(func( { 'hehe': 2, 'hoho': 10 } ), 7)
+        self.assertEqual(func( { 'hehe': 20, 'hoho': 100 } ), 79)
 
 ########################################################################
 # main

@@ -12,4 +12,4 @@ A Python tool for [Reader monad][pynonad]
 ### Usage
 
 
-[pymonad]:https://pypi.python.org/pypi/PyMonad/
+[pymonad]: https://pypi.python.org/pypi/PyMonad/ "PyMonad"

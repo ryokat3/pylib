@@ -6,10 +6,11 @@ A small collection of python tool
 
 ### Description
 
-A Python tool for [Reader monad][pynonad]
+A Python tool for [Reader monad][pymonad]
 
 
 ### Usage
 
 
-[pymonad]: https://pypi.python.org/pypi/PyMonad/ "PyMonad"
+
+[pymonad]:https://pypi.python.org/pypi/PyMonad/ "PyMonad"

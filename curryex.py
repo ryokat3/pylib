@@ -71,14 +71,14 @@ class ReaderEx(CurryEx):
             return super(ReaderEx, self).__call__(args=_args, state=_state)
         return recv_state
 
-    @classmethod
-    def args(cls, idx):
+    @staticmethod
+    def args(idx):
         def _(ary):
             return ary[idx]
         return CurryEx(_, CurryEx.Arg('args'))
 
-    @classmethod
-    def state(cls, key):
+    @staticmethod
+    def state(key):
         def _(dic):
             return dic[key]
         return CurryEx(_, CurryEx.Arg('state'))

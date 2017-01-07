@@ -8,12 +8,11 @@ from pymonad import *
 
 class CurryEx(object):
 
-    class Exception(Exception):
-        pass
-
     class Arg(object):
     
         def __init__(self, val):
+            assert isinstance(val, int) or isinstance(val, str), \
+                "val must be int or str"
             self.val = val
     
         def __eq__(self, other):
@@ -25,13 +24,19 @@ class CurryEx(object):
         def __ne__(self, other):
             return not self.__eq__(other)
 
-        def get_arg(self, *args, **kwargs):
+        def __call__(self, *args, **kwargs):
+
             if isinstance(self.val, int):
+                assert 0 <= self.val and self.val < len(args), \
+                        "val(={}) is out of range".format(str(self.val))
                 return args[self.val]
             elif isinstance(self.val, str):
+                assert self.val in kwargs, \
+                        "val(={}) is not key".format(str(self.val))
                 return kwargs[self.val]
             else:
-                raise CurryEx.Exception()
+                raise TypeError(
+                    "Type of val is {}".format(type(self.val)))
 
     def __init__(self, func, *args, **kwargs):
         self.func = func
@@ -44,8 +49,9 @@ class CurryEx(object):
             **(self.replace_kwargs(*args, **kwargs)))
 
     def replace(self, arg, *args, **kwargs):
-        return arg.get_arg(*args, **kwargs) if isinstance(arg, CurryEx.Arg) else \
-            arg(*args, **kwargs) if isinstance(arg, CurryEx) else arg 
+        return arg(*args, **kwargs) if \
+            isinstance(arg, CurryEx) or isinstance(arg, CurryEx.Arg) \
+            else arg 
 
     def replace_args(self, *args, **kwargs):
         return [ self.replace(arg, *args, **kwargs) for arg in self.args ]
@@ -61,39 +67,71 @@ def curryex(*args, **kwargs):
     return decorator
             
 ########################################################################
-# reader
+# composer
 ########################################################################
 
-class ReaderEx(CurryEx):
-
-    def __call__(self, *_args):
-        def recv_state(_state):
-            return super(ReaderEx, self).__call__(args=_args, state=_state)
-        return recv_state
-
-    @staticmethod
-    def args(idx):
-        def _(ary):
-            return ary[idx]
-        return CurryEx(_, CurryEx.Arg('args'))
-
-    @staticmethod
-    def state(key):
-        def _(dic):
-            return dic[key]
-        return CurryEx(_, CurryEx.Arg('state'))
+def ComposerReader():
+    def _(args, state):
+        return args
+    return unit(Reader, _)
 
 
-def readerex(*args, **kwargs):
-    def decorator(func):
-        return ReaderEx(func, *args, **kwargs)
-    return decorator 
+def Composer(func, *args, **kwargs):
+
+    this = CurryEx(func, *args, **kwargs)
+    
+    def combine(rh):
+        def apply_state(_state):
+            def tuplize(args):
+                return args if isinstance(args, tuple) else (args, )
+            def exec_curryex(args, state={}):
+                return this(args=tuplize(rh(args=tuplize(args),
+                    state=_state)), state=_state)
+            return exec_curryex
+        return apply_state
+    return combine
 
 
+def argkey(key):
+    assert isinstance(key, int) or isinstance(key, str), \
+            "key must be int or str"
+
+    def _(subscriptable):
+        return subscriptable[key]
+
+    return CurryEx(_, CurryEx.Arg('args')) if isinstance(key, int) else \
+           CurryEx(_, CurryEx.Arg('state'))
 
 ########################################################################
 # unittest
 ########################################################################
+
+class ComposerTest(unittest.TestCase):
+
+    def test_composer(self):
+    
+        _0 = argkey(0)
+        _1 = argkey(1)
+        _hehe = argkey('hehe')
+        _hoho = argkey('hoho')
+
+
+        add_ = Composer(operator.add, _0, _hehe)
+        sub_ = Composer(operator.sub, _hoho, _0)
+
+        func = ComposerReader() >> add_ >> add_ >> sub_
+
+        func1 = func( { 'hehe': 2, 'hoho': 10 } )
+        self.assertEqual(func1(1), 5)
+        self.assertEqual(func1(10), -4)
+
+        func2 = func( { 'hehe': 3, 'hoho': 100 } )
+        self.assertEqual(func2(10), 84)
+        self.assertEqual(func2(20), 74)
+
+        self.assertEqual(func1(1), 5)
+        self.assertEqual(func1(10), -4)
+
 
 class CurryExTest(unittest.TestCase):
 
@@ -152,43 +190,7 @@ class CurryExTest(unittest.TestCase):
 
 
 
-class ReaderExTest(unittest.TestCase):
 
-    def test_ReadeEx(self):
-    
-        _0 = ReaderEx.args(0)
-        _1 = ReaderEx.args(1)
-        _hehe = ReaderEx.state('hehe')
-        _hoho = ReaderEx.state('hoho')
-
-        add_ = ReaderEx(operator.add, _0, _hehe)
-        sub_ = ReaderEx(operator.sub, _hoho, _0)
-
-        func = unit(Reader, 1) >> add_ >> sub_
-
-        self.assertEqual(func( { 'hehe': 2, 'hoho': 10 } ), 7)
-        self.assertEqual(func( { 'hehe': 20, 'hoho': 100 } ), 79)
-
-
-    def test_ReadeEx_decorator(self):
-
-        _0 = ReaderEx.args(0)
-        _1 = ReaderEx.args(1)
-        _hehe = ReaderEx.state('hehe')
-        _hoho = ReaderEx.state('hoho')
-
-        @readerex(_0, _hehe)
-        def add(a, b):
-            return a + b
-
-        @readerex(_hoho, _0)
-        def sub(a, b):
-            return a - b
-
-        func = unit(Reader, 1) >> add >> sub
-
-        self.assertEqual(func( { 'hehe': 2, 'hoho': 10 } ), 7)
-        self.assertEqual(func( { 'hehe': 20, 'hoho': 100 } ), 79)
 
 ########################################################################
 # main

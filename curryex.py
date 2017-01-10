@@ -69,46 +69,26 @@ def curryex(*args, **kwargs):
 # composer
 ########################################################################
 
+def composable(this_func, *this_args, **this_kwargs):
+    @curry
+    def _(func, state, args):
+        def tuplize(x):
+            return x if isinstance(x, tuple) else (x, )
+        return CurryEx(this_func, *this_args, **this_kwargs)(
+                state=state, args=tuplize(func(args)))
+    return _
+
 def ComposerReader():
-    def _(args, state):
+    def _(args):
         return args
     return unit(Reader, _)
 
 
-
-
-def ComposerActivate(func, state={}):
-    def _(*args):
-        return func(state)(args)
+def re_composable(reader):
+    @curry
+    def _(func, state, a):
+        return reader(state)(func(a))
     return _
-
-def Composer(func, *args, **kwargs):
-
-    this = CurryEx(func, *args, **kwargs)
-    
-    def combine(inner):
-        def apply_state(_state):
-            def tuplize(args):
-                return args if isinstance(args, tuple) else (args, )
-            def exec_curryex(args, state=_state):
-                return this(args=tuplize(inner(args=tuplize(args),
-                    state=state)), state=state)
-            return exec_curryex
-        return apply_state
-    return combine
-
-
-def Composer2(reader):
-    def combine(inner):
-        def apply_state(_state):
-            def tuplize(args):
-                return args if isinstance(args, tuple) else (args, )
-            def exec_curryex(args, state=_state):
-                return reader(state)(tuplize(inner(args=tuplize(args))))
-            return exec_curryex
-        return apply_state
-    return combine
-
 
 
 def argkey(key):
@@ -193,23 +173,15 @@ class ComposerTest(unittest.TestCase):
         _hehe = argkey('hehe')
         _hoho = argkey('hoho')
 
-
-        add_ = Composer(operator.add, _0, _hehe)
-        sub_ = Composer(operator.sub, _hoho, _0)
+        add_ = composable(operator.add, _0, _hehe)
+        sub_ = composable(operator.sub, _hoho, _0)
 
         func = ComposerReader() >> add_ >> add_ >> sub_
+        func1 = func({ 'hehe': 3, 'hoho': 10 }) 
 
-        func1 = ComposerActivate(func, { 'hehe': 2, 'hoho': 10 } )
+        self.assertEqual(func1(1), 3) # 10 - (1 + 3 + 3) = 3
+        self.assertEqual(func1(2), 2) # 10 - (2 + 3 + 3) = 2
 
-        self.assertEqual(func1(1), 5)
-        self.assertEqual(func1(10), -4)
-
-        func2 = ComposerActivate(func, { 'hehe': 3, 'hoho': 100 } )
-        self.assertEqual(func2(10), 84)
-        self.assertEqual(func2(20), 74)
-
-        self.assertEqual(func1(1), 5)
-        self.assertEqual(func1(10), -4)
 
 
     def test_composer_multiple_args(self):
@@ -217,32 +189,37 @@ class ComposerTest(unittest.TestCase):
         _0 = argkey(0)
         _1 = argkey(1)
 
-        add_ = Composer(operator.add, _0, _1)
+        add_ = composable(operator.add, _0, _1)
 
         func = ComposerReader() >> add_
-        func1 = ComposerActivate(func)
+        func1 = func({})
 
-        self.assertEqual(func1(3, 4), 7)
-        self.assertEqual(func1(5, 6), 11)
+        self.assertEqual(func1((3, 4)), 7) # 3 + 4 = 7
+        self.assertEqual(func1((5, 6)), 11) # 5 + 6 = 11
 
+
+    def test_composer_multiple_args2(self):
+
+        _0 = argkey(0)
+        _1 = argkey(1)
 
         def addsub(c, d, a, b): return (a + b) * c, (a - b) * d
 
         _C = argkey('c')
         _D = argkey('d')
 
-        addsub_ = Composer(addsub, _C, _D, _0, _1)
+        addsub_ = composable(addsub, _C, _D, _0, _1)
         func = ComposerReader() >> addsub_ 
-        func1 = func >> Composer2(func) >> Composer2(func)
+        func1 = func >> re_composable(func) >> re_composable(func)
 
-        func2 = ComposerActivate(func1, { 'c': 2, 'd': 3 }) 
+        func2 = func1( { 'c': 2, 'd': 3 }) 
 
 
         func3 = ComposerReader() >> addsub_  >> addsub_ >> addsub_
-        func4 = ComposerActivate(func3, { 'c': 2, 'd': 3 }) 
+        func4 = func3( { 'c': 2, 'd': 3 }) 
 
-        self.assertEqual(func2(20, 10), func4(20, 10))
-        self.assertEqual(func2(20, 30), func4(20, 30))
+        self.assertEqual(func2((20, 10)), func4((20, 10)))
+        self.assertEqual(func2((20, 30)), func4((20, 30)))
 
 
 

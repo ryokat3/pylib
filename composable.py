@@ -1,226 +1,215 @@
 #!/usr/bin/env python
 #
 
+import sys
 import unittest
 import functools
 import operator
 from pymonad import *
 
-class CurryEx(object):
+if sys.version_info >= (3, 0):
+    from functools import reduce
 
-    class Arg(object):
-    
-        def __init__(self, val):
-            assert isinstance(val, int) or isinstance(val, str), \
-                "val must be int or str"
-            self.val = val
-    
-        def __eq__(self, other):
-            if type(self) == type(other) and type(self.val) == type(other.val):
-                return self.val == other.val
-            else:
-                return False
+class Arg(object):
 
-        def __ne__(self, other):
-            return not self.__eq__(other)
+    def __init__(self, val):
+        self.val = val
 
-        def __call__(self, *args, **kwargs):
+    def __eq__(self, other):
+        if type(self) == type(other):
+            return self.val == other.val
+        else:
+            return False
 
-            if isinstance(self.val, int):
-                assert 0 <= self.val and self.val < len(args), \
-                        "val(={}) is out of range".format(str(self.val))
-                return args[self.val]
-            elif isinstance(self.val, str):
-                assert self.val in kwargs, \
-                        "val(={}) is not key".format(str(self.val))
-                return kwargs[self.val]
-            else:
-                raise TypeError(
-                    "Type of val is {}".format(type(self.val)))
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
-    def __init__(self, func, *args, **kwargs):
-        self.func = func
-        self.args = args
-        self.kwargs = kwargs
+    def __hash__(self):
+        return hash(self.val)
 
     def __call__(self, *args, **kwargs):
-        return self.func(
-            *(self.replace_args(*args, **kwargs)), 
-            **(self.replace_kwargs(*args, **kwargs)))
 
-    def replace(self, arg, *args, **kwargs):
-        return arg(*args, **kwargs) if \
-            isinstance(arg, CurryEx) or isinstance(arg, CurryEx.Arg) \
-            else arg 
+        if isinstance(self.val, int):
+            if self.val < len(args):
+                return args[self.val]
+            else:
+                return Arg(self.val - len(args))
+        else:
+            if self in kwargs:
+                return kwargs[self.val]
+            elif self.val in kwargs:
+                return kwargs[self.val]
+            else:
+                return self
 
-    def replace_args(self, *args, **kwargs):
-        return [ self.replace(arg, *args, **kwargs) for arg in self.args ]
 
-    def replace_kwargs(self, *args, **kwargs):
-        return dict([ (key, self.replace(value, *args, **kwargs)) \
-            for key, value in self.kwargs ])
+class ArgTest(unittest.TestCase):
 
-def curryex(*args, **kwargs):
-    def decorator(func):
-        return CurryEx(func, *args, **kwargs)
-    return decorator
-            
-########################################################################
-# composer
-########################################################################
+    def test_equality(self):
+        self.assertEqual(Arg(1), Arg(1))
+        self.assertNotEqual(Arg(1), Arg(2))
+        self.assertNotEqual(Arg(1), Arg('1'))
+    
 
-def composable(this_func, *this_args, **this_kwargs):
-    @curry
-    def _(func, state, args):
-        def tuplize(x):
-            return x if isinstance(x, tuple) else (x, )
-        return CurryEx(this_func, *this_args, **this_kwargs)(
-                state=state, args=tuplize(func(args)))
+def binder(func, *args, **kwargs):
+
+    def is_replaced(arg):
+        return not isinstance(arg, Arg)
+
+    def replace(arg, *_args, **_kwargs):
+        return arg if is_replaced(arg) else arg(*_args, **_kwargs)
+
+    def _(*_args, **_kwargs):
+        new_args = tuple([replace(arg, *_args, **_kwargs) for arg in args])
+        new_kwargs = dict([(key, replace(value, *_args, **_kwargs)) \
+            for key, value in kwargs.items() ])
+
+        return func(*new_args, **new_kwargs) \
+            if reduce(operator.__and__, \
+                map(is_replaced, new_args), True) and \
+                reduce(operator.__and__, \
+                map(is_replaced, new_kwargs.values()), True) else \
+            binder(func, *new_args, **new_kwargs)
     return _
 
-def ComposerReader():
-    def _(args):
-        return args
-    return unit(Reader, _)
+class CurryexTest(unittest.TestCase):
 
+    def test_replace_positional_args(self):
+        _0 = Arg(0)
+        _1 = Arg(1)
 
-def re_composable(reader):
-    @curry
-    def _(func, state, a):
-        return reader(state)(func(a))
-    return _
+        func = binder(operator.sub, _1, _0)
+        self.assertEqual(func(1, 2), 1)
+        self.assertEqual(func(3)(10), 7)
 
+    def test_replace_keyword_args(self):
+        _0 = Arg(0)
+        _1 = Arg(1)
 
-def argkey(key):
-    assert isinstance(key, int) or isinstance(key, str), \
-            "key must be int or str"
-
-    def _(subscriptable):
-        return subscriptable[key]
-
-    return CurryEx(_, CurryEx.Arg('args')) if isinstance(key, int) else \
-           CurryEx(_, CurryEx.Arg('state'))
-
-########################################################################
-# unittest
-########################################################################
-
-
-
-class CurryExTest(unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        pass
-
-    def setUp(self):
-        self._0 = CurryEx.Arg(0)
-        self._1 = CurryEx.Arg(1)
-        self._2 = CurryEx.Arg(2)
-        self._hehe = CurryEx.Arg('hehe')
-
-    def tearDown(self):
-        pass
-
-    def test_Arg(self):
-        self.assertEqual(CurryEx.Arg(1), CurryEx.Arg(1))
-        self.assertNotEqual(CurryEx.Arg(1), CurryEx.Arg(2))
-        self.assertNotEqual(CurryEx.Arg(1), CurryEx.Arg('1'))
-
-    def test_CurryEx(self):
-
-        func1 = CurryEx(operator.add, self._0, 2)
-        self.assertEqual(func1(1), 3)
-
-        func2 = CurryEx(operator.sub, self._1, self._0)
-        self.assertEqual(func2(2, 3), 1)
-
-        func3 = CurryEx(operator.add, 10, self._hehe)
-        self.assertEqual(func3(hehe=1), 11)
-
-        func4 = CurryEx(operator.sub,
-            CurryEx(operator.add, self._2, self._1), self._0)
-        self.assertEqual(func4(1, 2, 3), 4)
-
-    def test_CurryEx_decorator(self):
-
-        @curryex(self._1, self._0)
         def sub(a, b):
             return a - b
+        func = binder(sub, b=_0, a=_1)
+        self.assertEqual(func(1, 2), 1)
+        self.assertEqual(func(3)(10), 7)
 
-        self.assertEqual(sub(1, 2), 1)
-        self.assertEqual(sub(10, 20), 10)
 
-        @curryex(sub, self._2)
-        def sub2(a, b):
+    def test_keyword_args(self):
+        _a1 = Arg('a1')
+        _a2 = Arg('a2')
+
+        def sub(a, b):
             return a - b
-
-        self.assertEqual(sub2(10, 20, 5), 5)
-        self.assertEqual(sub2(10, 30, 5), 15)
-
-
-
-class ComposerTest(unittest.TestCase):
-
-    def test_composer(self):
-    
-        _0 = argkey(0)
-        _1 = argkey(1)
-        _hehe = argkey('hehe')
-        _hoho = argkey('hoho')
-
-        add_ = composable(operator.add, _0, _hehe)
-        sub_ = composable(operator.sub, _hoho, _0)
-
-        func = ComposerReader() >> add_ >> add_ >> sub_
-        func1 = func({ 'hehe': 3, 'hoho': 10 }) 
-
-        self.assertEqual(func1(1), 3) # 10 - (1 + 3 + 3) = 3
-        self.assertEqual(func1(2), 2) # 10 - (2 + 3 + 3) = 2
+        func = binder(sub, b=_a1, a=_a2)
+        self.assertEqual(func(a1=1, a2=2), 1)
+        self.assertEqual(func(a1=3)(a2=10), 7)
 
 
+    def test_mixed_args(self):
+        _0 = Arg(0)
+        _a1 = Arg('a1')
 
-    def test_composer_multiple_args(self):
+        def sub(a, b):
+            return a - b
+        func = binder(sub, b=_a1, a=_0)
+        self.assertEqual(func(2, a1=1), 1)
+        self.assertEqual(func(a1=3)(10), 7)
 
-        _0 = argkey(0)
-        _1 = argkey(1)
+class Curry(object):
 
-        add_ = composable(operator.add, _0, _1)
+    @staticmethod
+    def _curry(func, nargs):
+        def gen(g_nargs, *g_args):
+            def _(*args):
+                return gen(g_nargs - len(args), *(g_args + args))
+            return _ if g_nargs > 0 else func(*g_args) 
+        return gen(nargs)
 
-        func = ComposerReader() >> add_
-        func1 = func({})
+    def __init__(self, func, nargs):
+        self.func = self._curry(func, nargs)
+        self.nargs = nargs
 
-        self.assertEqual(func1((3, 4)), 7) # 3 + 4 = 7
-        self.assertEqual(func1((5, 6)), 11) # 5 + 6 = 11
+    def __call__(self, *args):
+        return self.func(*args)
+
+def identity(*args):            
+    return args if len(args) > 1 else args[0]
+
+def compose(f_outer, f_inner):
+    def _tuplize(x):
+        return x if isinstance(x, tuple) else (x,)
+
+    def _(*args):
+        return f_outer(*(_tuplize(f_inner(*args))))
+
+    return _
+
+def composable(func, *args, **kwargs):
+    def _(_func):
+        def recv_state(_state):
+            return Curry(compose(binder(func, *args, **kwargs)(
+                **_state), _func), _func.nargs)
+        return recv_state
+    return _
 
 
-    def test_composer_multiple_args2(self):
+class ComposeTest(unittest.TestCase):
 
-        _0 = argkey(0)
-        _1 = argkey(1)
+    def test_Curry(self):
 
-        def addsub(c, d, a, b): return (a + b) * c, (a - b) * d
+        func = Curry(identity, 4)
+        self.assertEqual(func.nargs, 4)
+        self.assertEqual(func(1, 2, 3, 4), (1, 2, 3, 4))
+        self.assertEqual(func(1)(2, 3, 4), (1, 2, 3, 4))
+        self.assertEqual(func(1)(2)(3)(4), (1, 2, 3, 4))
+        self.assertEqual(func(1)(2)(3, 4), (1, 2, 3, 4))
 
-        _C = argkey('c')
-        _D = argkey('d')
+    def test_starter_reader(self):
+        starter = Curry(identity, 1)
+        func = unit(Reader, starter)(None)
+        self.assertEqual(func('hello'), 'hello')
+        self.assertEqual(func(123), 123)
 
-        addsub_ = composable(addsub, _C, _D, _0, _1)
-        func = ComposerReader() >> addsub_ 
-        func1 = func >> re_composable(func) >> re_composable(func)
+    def test_starter_reader_multi(self):
+        starter = Curry(identity, 3)
+        func = unit(Reader, starter)(None)
+        self.assertEqual(func('hello', 1, 2), ('hello', 1, 2))
+        self.assertEqual(func('hello')(1, 2), ('hello', 1, 2))
+        self.assertEqual(func('hello', 1)(2), ('hello', 1, 2))
+        self.assertEqual(func('hello')(1)(2), ('hello', 1, 2))
 
-        func2 = func1( { 'c': 2, 'd': 3 }) 
+    def test_composal(self):
+        _0 = Arg(0)
+        _VAL = Arg('VAL')
 
+        starter = Curry(identity, 1)
+        add = composable(operator.add, _0, _VAL)
+        monad = unit(Reader, starter) >> add
+        func = monad({'VAL':10})
+        self.assertEqual(func(3), 13)
+        self.assertEqual(func(7), 17)
 
-        func3 = ComposerReader() >> addsub_  >> addsub_ >> addsub_
-        func4 = func3( { 'c': 2, 'd': 3 }) 
+    def test_composal_multi(self):
+        _0 = Arg(0)
+        _1 = Arg(1)
+        _VAL = Arg('VAL')
 
-        self.assertEqual(func2((20, 10)), func4((20, 10)))
-        self.assertEqual(func2((20, 30)), func4((20, 30)))
+        starter = Curry(identity, 2)
+        def calc(a, b, c):
+            return (a - b) * c, (b - a) * c
 
+        calc_ = composable(calc, _0, _1, _VAL)
+        monad = unit(Reader, starter) >> calc_ 
+        func = monad({'VAL':10})
+        self.assertEqual(func(7, 5), (20, -20))
+
+        calc_ = composable(calc, _1, _0, _VAL)
+        monad = unit(Reader, starter) >> calc_ 
+        func = monad({'VAL':10})
+        self.assertEqual(func(7, 5), (-20, 20))
+
+        monad = unit(Reader, starter) >> calc_ >> calc_
+        func = monad({'VAL':10})
+        self.assertEqual(func(7, 5), (400, -400))
 
 
 ########################################################################

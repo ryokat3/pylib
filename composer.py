@@ -112,7 +112,6 @@ if __name__ == '__main__':
     import os
 
     sys.path.append(os.path.join(os.path.dirname(__file__), 'test'))
-    import composer_test
+    from composer_test import *
 
     unittest.main()
-

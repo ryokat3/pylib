@@ -25,6 +25,7 @@
 # THE SOFTWARE.
 #
 
+import copy
 import sys
 import functools
 import operator
@@ -118,10 +119,31 @@ def compose(f_outer, f_inner):
     return _
 
 def composable(func, *args, **kwargs):
-    def _(_func):
+
+    def is_replaced(arg):
+        return not (isinstance(arg, Arg) and not isinstance(arg.val, int))
+
+    def replace(arg, *_args, **_kwargs):
+        return arg if is_replaced(arg) else arg(*_args, **_kwargs)
+
+    def _(_func, _prev_state={}):
         def recv_state(_state):
-            return Curry(compose(binder(func, *args, **kwargs)(
-                **_state), _func), _func.nargs)
+            new_args = tuple([replace(arg, [], **_state) for arg in args])
+            new_kwargs = dict([(key, replace(value, [], **_state)) \
+                for key, value in kwargs.items() ])
+
+            _new_state = copy.copy(_prev_state).update(_state) \
+                if _prev_state else _state
+
+            if reduce(operator.__and__, \
+                    map(is_replaced, new_args), True) and \
+                    reduce(operator.__and__, \
+                    map(is_replaced, new_kwargs.values()), True):
+                return Curry(compose(binder(func, *new_args, **new_kwargs)(
+                        **_state), _func), _func.nargs)
+            else:
+                return composable(func, *new_args, **new_kwargs)(
+                        _func, _new_state)
         return recv_state
     return _
 

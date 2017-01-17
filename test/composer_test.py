@@ -134,6 +134,22 @@ class ComposeTest(unittest.TestCase):
         self.assertEqual(func(7, 5, 'hello'), (400, -400))
 
 
+    def test_composal_partial_state(self):
+        _0 = Arg(0)
+        _1 = Arg(1)
+        _VAL1 = Arg('VAL1')
+        _VAL2 = Arg('VAL2')
+
+        starter = Curry(identity, 1)
+        def calc(a, b, c):
+            return (a - b) * c, (b - a) * c
+
+        calc_ = composable(calc, _VAL1, _0, _VAL2)
+        monad = unit(Reader, starter) >> calc_ 
+        func = monad({'VAL1':10})
+        func2 = func({'VAL2':20})
+        self.assertEqual(func2(5), (100, -100))
+
 ########################################################################
 # main
 ########################################################################

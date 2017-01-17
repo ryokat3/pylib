@@ -111,6 +111,19 @@ class ComposeTest(unittest.TestCase):
         func = monad({'VAL':10})
         self.assertEqual(func(7, 5), (400, -400))
 
+    def test_composal_unmatch(self):
+        _0 = Arg(0)
+        _1 = Arg(1)
+        _VAL = Arg('VAL')
+
+        starter = Curry(identity, 3)
+        def calc(a, b, c):
+            return (a - b) * c, (b - a) * c
+
+        calc_ = composable(calc, _0, _1, _VAL)
+        monad = unit(Reader, starter) >> calc_ 
+        func = monad({'VAL':10})
+        self.assertEqual(func(7, 5, 100), (20, -20))
 
 ########################################################################
 # main

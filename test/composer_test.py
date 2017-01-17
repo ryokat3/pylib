@@ -120,10 +120,19 @@ class ComposeTest(unittest.TestCase):
         def calc(a, b, c):
             return (a - b) * c, (b - a) * c
 
+        def calc2(a, b, c):
+            return (a - b) * c, (b - a) * c, 'hehe'
+
         calc_ = composable(calc, _0, _1, _VAL)
         monad = unit(Reader, starter) >> calc_ 
         func = monad({'VAL':10})
         self.assertEqual(func(7, 5, 100), (20, -20))
+
+        calc2_ = composable(calc2, _0, _1, _VAL)
+        monad = unit(Reader, starter) >> calc2_ >> calc_ 
+        func = monad({'VAL':10})
+        self.assertEqual(func(7, 5, 'hello'), (400, -400))
+
 
 ########################################################################
 # main

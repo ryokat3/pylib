@@ -25,129 +25,178 @@
 # THE SOFTWARE.
 #
 
-import copy
+import inspect
 import sys
-import functools
 import operator
-from pymonad import *
+
+from abc import ABCMeta, abstractmethod, abstractproperty
+from itertools import chain
 
 if sys.version_info >= (3, 0):
     from functools import reduce
 
-class Arg(object):
+def composer(obj, *args, **kwargs):
 
-    def __init__(self, val):
-        self.val = val
+    def _nargs(func):
+        def _len(x): return len(x) if x else 0
+        _spec = inspect.getargspec(func)
+        return _len(_spec.args) - _len(_spec.defaults)
 
-    def __eq__(self, other):
-        if type(self) == type(other):
-            return self.val == other.val
+    if args or kwargs:
+        if callable(obj):
+            return ComposerFunction(obj, *args, **kwargs)
         else:
-            return False
+            raise NotImplementedError()
+    else:
+        if isinstance(obj, ComposerBase):
+            return obj
+        elif isinstance(obj, int):
+            return ComposerArgs(obj)
+        elif isinstance(obj, str):
+            return ComposerKwargs(obj)
+        elif inspect.isfunction(obj):
+            return ComposerFunction(obj, \
+                    *(tuple([ ComposerArgs(idx) for idx in \
+                    range(0, _nargs(obj)) ])))
+        elif callable(obj): # callbale but not function
+            return ComposerFunction(obj, \
+                    *(tuple([ ComposerArgs(idx) for idx in \
+                    range(0, _nargs(obj) - 1) ])))
+        else:
+            raise NotImplementedError()
 
-    def __ne__(self, other):
-        return not self.__eq__(other)
 
-    def __hash__(self):
-        return hash(self.val)
+class ComposerBase(object):
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def getArgsSet(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def getKwargsSet(self):
+        raise NotImplementedError()
+        
+    @abstractmethod
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError()
+
+
+class ComposerFunctionBase(ComposerBase):
+
+    @abstractmethod
+    def applyArgs(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def run(self):
+        raise NotImplementedError()
+
+    @abstractmethod
+    def __rshift__(self, func):
+        raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
-
-        if isinstance(self.val, int):
-            if self.val < len(args):
-                return args[self.val]
-            else:
-                return Arg(self.val - len(args))
-        else:
-            if self in kwargs:
-                return kwargs[self.val]
-            elif self.val in kwargs:
-                return kwargs[self.val]
-            else:
-                return self
+        func = self.applyArgs(*args, **kwargs)
+        return func if len(func.getArgsSet()) != 0 or \
+                len(func.getKwargsSet()) != 0 else func.run()
 
 
-def binder(func, *args, **kwargs):
+class ComposerArgs(ComposerBase):
 
-    def is_replaced(arg):
-        return not isinstance(arg, Arg)
+    def __init__(self, idx):
+        self.idx = idx
 
-    def replace(arg, *_args, **_kwargs):
-        return arg if is_replaced(arg) else arg(*_args, **_kwargs)
+    def __call__(self, *args, **kwargs):
+        return args[self.idx] if self.idx < len(args) else \
+                ComposerArgs(self.idx - len(args))
 
-    def _(*_args, **_kwargs):
-        new_args = tuple([replace(arg, *_args, **_kwargs) for arg in args])
-        new_kwargs = dict([(key, replace(value, *_args, **_kwargs)) \
-            for key, value in kwargs.items() ])
+    def getArgsSet(self):
+        return (self.idx, )
 
-        return func(*new_args, **new_kwargs) \
-            if reduce(operator.__and__, \
-                map(is_replaced, new_args), True) and \
-                reduce(operator.__and__, \
-                map(is_replaced, new_kwargs.values()), True) else \
-            binder(func, *new_args, **new_kwargs)
-    return _
+    def getKwargsSet(self):
+        return ()
 
 
-class Curry(object):
+class ComposerKwargs(ComposerBase):
 
-    @staticmethod
-    def _curry(func, nargs):
-        def gen(g_nargs, *g_args):
-            def _(*args):
-                return gen(g_nargs - len(args), *(g_args + args))
-            return _ if g_nargs > 0 else func(*g_args) 
-        return gen(nargs)
+    def __init__(self, key):
+        self.key = key
 
-    def __init__(self, func, nargs):
-        self.func = self._curry(func, nargs)
-        self.nargs = nargs
+    def __call__(self, *args, **kwargs):
+         return kwargs[self.key] if self.key in kwargs else self
 
-    def __call__(self, *args):
-        return self.func(*args)
+    def getArgsSet(self):
+        return ()
 
-def identity(*args):            
-    return args if len(args) > 1 else args[0]
-
-def compose(f_outer, f_inner):
-    def _tuplize(x):
-        return x if isinstance(x, tuple) else (x,)
-
-    def _(*args):
-        return f_outer(*(_tuplize(f_inner(*args))))
-
-    return _
-
-def composable(func, *args, **kwargs):
-
-    def is_replaced(arg):
-        return not (isinstance(arg, Arg) and not isinstance(arg.val, int))
-
-    def replace(arg, *_args, **_kwargs):
-        return arg if is_replaced(arg) else arg(*_args, **_kwargs)
-
-    def _(_func, _prev_state={}):
-        def recv_state(_state):
-            new_args = tuple([replace(arg, [], **_state) for arg in args])
-            new_kwargs = dict([(key, replace(value, [], **_state)) \
-                for key, value in kwargs.items() ])
-
-            _new_state = copy.copy(_prev_state).update(_state) \
-                if _prev_state else _state
-
-            if reduce(operator.__and__, \
-                    map(is_replaced, new_args), True) and \
-                    reduce(operator.__and__, \
-                    map(is_replaced, new_kwargs.values()), True):
-                return Curry(compose(binder(func, *new_args, **new_kwargs)(
-                        **_state), _func), _func.nargs)
-            else:
-                return composable(func, *new_args, **new_kwargs)(
-                        _func, _new_state)
-        return recv_state
-    return _
+    def getKwargsSet(self):
+        return (self.key,)
 
 
+class ComposerFunction(ComposerFunctionBase):
+
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def getArgsSet(self):
+        return tuple(frozenset(reduce(operator.add, \
+                [ arg.getArgsSet() for arg in chain( \
+                self.args, self.kwargs.values()) \
+                if isinstance(arg, ComposerBase) ], ())))
+
+    def getKwargsSet(self):
+        return tuple(frozenset(reduce(operator.add, \
+                [arg.getKwargsSet() for arg in chain( \
+                self.args, self.kwargs.values()) \
+                if isinstance(arg, ComposerBase)], ())))
+        
+
+    def applyArgs(self, *args, **kwargs):
+
+        def replaceArg(arg, *args, **kwargs):
+            return arg(*args, **kwargs) if \
+                    isinstance(arg, ComposerBase) else arg
+
+        return ComposerFunction(self.func, \
+            *(tuple([replaceArg(arg, *args, **kwargs) \
+                for arg in self.args])), \
+            **(dict([(key, replaceArg(value, *args, **kwargs)) \
+                for key, value in self.kwargs.items() ])))
+
+    def run(self):
+        return self.func(*self.args, **self.kwargs)
+
+    def __rshift__(self, outf):
+        return ComposerBind(self, outf)
+
+
+class ComposerBind(ComposerFunctionBase):
+
+    def __init__(self, inf, outf):
+        self.inf = inf
+        self.outf = outf
+
+    def getArgsSet(self):
+        return self.inf.getArgsSet()
+
+    def getKwargsSet(self):
+        return tuple(frozenset(self.inf.getKwargsSet() + \
+                self.outf.getKwargsSet()))
+
+
+    def applyArgs(self, *args, **kwargs):
+        return ComposerBind(self.inf.applyArgs(*args, **kwargs), \
+            self.outf.applyArgs(**kwargs))
+
+    def run(self):
+        def force_tuple(x):
+            return x if isinstance(x, tuple) else (x, )
+        return self.outf(*force_tuple(self.inf.run()))
+
+    def __rshift__(self, outf):
+        return ComposerBind(self, outf)
 
 ########################################################################
 # main

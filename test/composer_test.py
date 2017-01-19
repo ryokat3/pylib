@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 
+import operator
 import os
 import sys
 import unittest
@@ -8,147 +9,180 @@ import unittest
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from composer import *
 
-class CurryexTest(unittest.TestCase):
+class ComposerArgsTest(unittest.TestCase):
 
-    def test_replace_positional_args(self):
-        _0 = Arg(0)
-        _1 = Arg(1)
+    def test(self):
+        _0 = composer(0)
+        _1 = composer(1)
+        _2 = composer(2)
+        _3 = composer(3)
 
-        func = binder(operator.sub, _1, _0)
-        self.assertEqual(func(1, 2), 1)
-        self.assertEqual(func(3)(10), 7)
+        self.assertEqual(_0.getArgsSet(), (0,))
+        self.assertEqual(_1.getArgsSet(), (1,))
 
-    def test_replace_keyword_args(self):
-        _0 = Arg(0)
-        _1 = Arg(1)
+        self.assertFalse(_0.getKwargsSet())
 
-        def sub(a, b):
-            return a - b
-        func = binder(sub, b=_0, a=_1)
-        self.assertEqual(func(1, 2), 1)
-        self.assertEqual(func(3)(10), 7)
+        self.assertEqual(_0(0,1,2), 0)
+        self.assertEqual(_1(0,1,2), 1)
 
-
-    def test_keyword_args(self):
-        _a1 = Arg('a1')
-        _a2 = Arg('a2')
-
-        def sub(a, b):
-            return a - b
-        func = binder(sub, b=_a1, a=_a2)
-        self.assertEqual(func(a1=1, a2=2), 1)
-        self.assertEqual(func(a1=3)(a2=10), 7)
+        self.assertEqual(_3(0,1,2)(0,1,2), 0)
+        self.assertEqual(_3(0)(0)(0)(1), 1)
 
 
-    def test_mixed_args(self):
-        _0 = Arg(0)
-        _a1 = Arg('a1')
+class ComposerKwArgsTest(unittest.TestCase):
 
-        def sub(a, b):
-            return a - b
-        func = binder(sub, b=_a1, a=_0)
-        self.assertEqual(func(2, a1=1), 1)
-        self.assertEqual(func(a1=3)(10), 7)
+    def test(self):
+        _a1 = composer('a1')
+        _a2 = composer('a2')
+        _a3 = composer('a3')
+        _a4 = composer('a4')
+
+        self.assertEqual(_a1.getKwargsSet(), ('a1',))
+        self.assertEqual(_a2.getKwargsSet(), ('a2',))
+
+        self.assertFalse(_a1.getArgsSet())
+
+        self.assertEqual(_a1(0,1,a1=1), 1)
+        self.assertEqual(_a2(0,1,a2=2,a1=1), 2)
 
 
 
-class ComposeTest(unittest.TestCase):
+class ComposerFunctionTest(unittest.TestCase):
 
-    def test_Curry(self):
+    def test_Args(self):
+        _0 = composer(0)
+        _1 = composer(1)
+        sub = composer(operator.sub, _1, _0)
 
-        func = Curry(identity, 4)
-        self.assertEqual(func.nargs, 4)
-        self.assertEqual(func(1, 2, 3, 4), (1, 2, 3, 4))
-        self.assertEqual(func(1)(2, 3, 4), (1, 2, 3, 4))
-        self.assertEqual(func(1)(2)(3)(4), (1, 2, 3, 4))
-        self.assertEqual(func(1)(2)(3, 4), (1, 2, 3, 4))
+        self.assertEqual(sub(1, 10), 9)
+        self.assertEqual(sub(1)(10), 9)
 
-    def test_starter_reader(self):
-        starter = Curry(identity, 1)
-        func = unit(Reader, starter)(None)
-        self.assertEqual(func('hello'), 'hello')
-        self.assertEqual(func(123), 123)
+    def test_Kwargs(self):
+        _a1 = composer('a1')
+        _a2 = composer('a2')
+        sub = composer(operator.sub, _a1, _a2)
 
-    def test_starter_reader_multi(self):
-        starter = Curry(identity, 3)
-        func = unit(Reader, starter)(None)
-        self.assertEqual(func('hello', 1, 2), ('hello', 1, 2))
-        self.assertEqual(func('hello')(1, 2), ('hello', 1, 2))
-        self.assertEqual(func('hello', 1)(2), ('hello', 1, 2))
-        self.assertEqual(func('hello')(1)(2), ('hello', 1, 2))
-
-    def test_composal(self):
-        _0 = Arg(0)
-        _VAL = Arg('VAL')
-
-        starter = Curry(identity, 1)
-        add = composable(operator.add, _0, _VAL)
-        monad = unit(Reader, starter) >> add
-        func = monad({'VAL':10})
-        self.assertEqual(func(3), 13)
-        self.assertEqual(func(7), 17)
-
-    def test_composal_multi(self):
-        _0 = Arg(0)
-        _1 = Arg(1)
-        _VAL = Arg('VAL')
-
-        starter = Curry(identity, 2)
-        def calc(a, b, c):
-            return (a - b) * c, (b - a) * c
-
-        calc_ = composable(calc, _0, _1, _VAL)
-        monad = unit(Reader, starter) >> calc_ 
-        func = monad({'VAL':10})
-        self.assertEqual(func(7, 5), (20, -20))
-
-        calc_ = composable(calc, _1, _0, _VAL)
-        monad = unit(Reader, starter) >> calc_ 
-        func = monad({'VAL':10})
-        self.assertEqual(func(7, 5), (-20, 20))
-
-        monad = unit(Reader, starter) >> calc_ >> calc_
-        func = monad({'VAL':10})
-        self.assertEqual(func(7, 5), (400, -400))
-
-    def test_composal_unmatch(self):
-        _0 = Arg(0)
-        _1 = Arg(1)
-        _VAL = Arg('VAL')
-
-        starter = Curry(identity, 3)
-        def calc(a, b, c):
-            return (a - b) * c, (b - a) * c
-
-        def calc2(a, b, c):
-            return (a - b) * c, (b - a) * c, 'hehe'
-
-        calc_ = composable(calc, _0, _1, _VAL)
-        monad = unit(Reader, starter) >> calc_ 
-        func = monad({'VAL':10})
-        self.assertEqual(func(7, 5, 100), (20, -20))
-
-        calc2_ = composable(calc2, _0, _1, _VAL)
-        monad = unit(Reader, starter) >> calc2_ >> calc_ 
-        func = monad({'VAL':10})
-        self.assertEqual(func(7, 5, 'hello'), (400, -400))
+        self.assertEqual(sub(a1=10, a2=1), 9)
+        self.assertEqual(sub(a2=1)(a1=10), 9)
 
 
-    def test_composal_partial_state(self):
-        _0 = Arg(0)
-        _1 = Arg(1)
-        _VAL1 = Arg('VAL1')
-        _VAL2 = Arg('VAL2')
+    def test_MixedArgs(self):
+        _1 = composer(1)
+        _a1 = composer('a1')
+        sub = composer(operator.sub, _a1, _1)
 
-        starter = Curry(identity, 1)
-        def calc(a, b, c):
-            return (a - b) * c, (b - a) * c
+        self.assertEqual(sub(1000, 1, a1=10), 9)
+        self.assertEqual(sub(1000)(1)(a1=10), 9)
+        self.assertEqual(sub(a1=10)(1000, 1), 9)
 
-        calc_ = composable(calc, _VAL1, _0, _VAL2)
-        monad = unit(Reader, starter) >> calc_ 
-        func = monad({'VAL1':10})
-        func2 = func({'VAL2':20})
-        self.assertEqual(func2(5), (100, -100))
+
+class ComposerFunctionBind(unittest.TestCase):
+
+    def test_bind_1(self):
+
+        _0 = composer(0)
+        add10 = composer(operator.add, 10, _0)
+
+        func = add10 >> add10
+        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func(1), 21)
+        self.assertEqual(func(2), 22)
+
+
+    def test_bind_2(self):
+
+        _0 = composer(0)
+        add10 = composer(operator.add, 10, _0)
+
+        func = add10(add10)
+
+        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func(1), 21)
+        self.assertEqual(func(2), 22)
+
+        func = add10 >> add10 >> add10
+
+        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func(1), 31)
+        self.assertEqual(func(2), 32)
+
+        func = func >> add10 >> func
+
+        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func(1), 71)
+        self.assertEqual(func(2), 72)
+
+
+    def test_bind_multiple_values(self):
+        _0 = composer(0)
+        _1 = composer(1)
+        def calc(a, b):
+            return a + b, a - b
+        func = composer(calc, _0, _1)
+
+        func = func >> func >> func
+
+        self.assertEqual(func(20, 10), (60, 20))
+        self.assertEqual(func(20)(10), (60, 20))
+
+    def test_wrap_function(self):
+
+        def calc(a, b):
+            return a + b, a - b
+        func = composer(calc)
+        self.assertEqual(func.getArgsSet(), (0,1))
+
+        func = func >> func >> func
+
+        self.assertEqual(func(20, 10), (60, 20))
+        self.assertEqual(func(20)(10), (60, 20))
+
+    def test_wrap_callable(self):
+
+        class calc(object):
+            def __call__(self, a, b):
+                return a + b, a - b
+        func = composer(calc())
+        self.assertEqual(func.getArgsSet(), (0,1))
+
+        func = func >> func >> func
+
+        self.assertEqual(func(20, 10), (60, 20))
+        self.assertEqual(func(20)(10), (60, 20))
+
+    def test_wrap_classmethod(self):
+
+        class calc(object):
+            @classmethod
+            def call(cls, a, b):
+                return a + b, a - b
+        func = composer(calc.call)
+        self.assertEqual(func.getArgsSet(), (0,1))
+
+        func = func >> func >> func
+
+        self.assertEqual(func(20, 10), (60, 20))
+        self.assertEqual(func(20)(10), (60, 20))
+
+
+    def test_wrap_staticmethod(self):
+
+        class calc(object):
+            @staticmethod
+            def call(a, b):
+                return a + b, a - b
+        func = composer(calc.call)
+        self.assertEqual(func.getArgsSet(), (0,1))
+
+        func = func >> func >> func
+
+        self.assertEqual(func(20, 10), (60, 20))
+        self.assertEqual(func(20)(10), (60, 20))
+
+
+
+
+
 
 ########################################################################
 # main

@@ -65,7 +65,7 @@ def composer(obj, *args, **kwargs):
             return ComposerArgs(obj)
         elif isinstance(obj, str):
             return ComposerKwargs(obj)
-        elif inspect.isgeneratorfunction(obj):
+        if inspect.isgeneratorfunction(obj):
             return ComposerIterableFunction(obj, \
                     *(tuple([ ComposerArgs(idx) for idx in \
                     range(0, get_nargs(obj)) ])))
@@ -90,31 +90,10 @@ def composer(obj, *args, **kwargs):
 def iterable_composer(obj, *args, **kwargs):
 
     if args or kwargs:
-        if callable(obj):
+        if inspect.isgeneratorfunction(obj):
             return ComposerIterableFunction(obj, *args, **kwargs)
-        else:
-            raise NotImplementedError()
-    else:
-        if isinstance(obj, ComposerBase):
-            return obj
-        elif inspect.isgeneratorfunction(obj):
-            return ComposerIterableFunction(obj, \
-                    *(tuple([ ComposerArgs(idx) for idx in \
-                    range(0, get_nargs(obj)) ])))
-        elif inspect.isfunction(obj):
-            return ComposerIterableFunction(obj, \
-                    *(tuple([ ComposerArgs(idx) for idx in \
-                    range(0, get_nargs(obj)) ])))
-        elif inspect.ismethod(obj): # classmethod
-            return ComposerIterableFunction(obj, \
-                    *(tuple([ ComposerArgs(idx) for idx in \
-                    range(0, get_nargs(obj) - 1) ])))
-        elif callable(obj): # callbale but not function nor method
-            return ComposerIterableFunction(obj, \
-                    *(tuple([ ComposerArgs(idx) for idx in \
-                    range(0, get_nargs(obj.__call__) - 1) ])))
-        elif hasattr(obj, '__iter__'): # iterable (except str)
-            return ComposerIterable(obj)
+        elif callable(obj):
+            return ComposerIterableFunction(obj, *args, **kwargs)
         else:
             raise NotImplementedError()
 

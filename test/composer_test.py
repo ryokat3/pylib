@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 
+import itertools
 import operator
 import os
 import sys
@@ -180,7 +181,42 @@ class ComposerFunctionBind(unittest.TestCase):
         self.assertEqual(func(20)(10), (60, 20))
 
 
+class ComposerIterableTest(unittest.TestCase):
 
+    def test_iterable(self):
+        gen = composer(range(3))
+
+        self.assertEqual(tuple([ a for a in gen() ]), (0, 1, 2))
+
+
+class ComposerIterableBindTest(unittest.TestCase):
+
+    def test_iterable_bind(self):
+        _0 = composer(0)
+        gen = composer(range(3))
+        add10 = composer(operator.add, 10, _0)
+
+        iterable = gen >> add10
+        self.assertEqual(tuple([ a for a in iterable() ]), (10, 11, 12))
+
+
+class ComposerIterableFunctionTest(unittest.TestCase):
+
+    def test_iterable(self):
+        _0 = composer(0)
+        _1 = composer(1)
+
+        def gensub(a, b):
+            for i in range(0, a - b):
+                yield i
+
+        gen = composer(gensub)
+        self.assertEqual(tuple([ a for a in gen(10, 7) ]), (0, 1, 2))
+        self.assertEqual(tuple([ a for a in gen(10)(7) ]), (0, 1, 2))
+
+        gen = composer(gensub, _1, _0)
+        self.assertEqual(tuple([ a for a in gen(7, 10) ]), (0, 1, 2))
+        self.assertEqual(tuple([ a for a in gen(7)(10) ]), (0, 1, 2))
 
 
 

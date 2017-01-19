@@ -58,10 +58,14 @@ def composer(obj, *args, **kwargs):
             return ComposerFunction(obj, \
                     *(tuple([ ComposerArgs(idx) for idx in \
                     range(0, _nargs(obj)) ])))
-        elif callable(obj): # callbale but not function
+        elif inspect.ismethod(obj): # classmethod
             return ComposerFunction(obj, \
                     *(tuple([ ComposerArgs(idx) for idx in \
                     range(0, _nargs(obj) - 1) ])))
+        elif callable(obj): # callbale but not function nor method
+            return ComposerFunction(obj, \
+                    *(tuple([ ComposerArgs(idx) for idx in \
+                    range(0, _nargs(obj.__call__) - 1) ])))
         else:
             raise NotImplementedError()
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 #
 
-import itertools
 import operator
-import os
-import sys
 import unittest
 
+import os
+import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from composer import *
 
 class ComposerArgsTest(unittest.TestCase):
@@ -242,4 +242,6 @@ class ComposerIterableFunctionTest(unittest.TestCase):
 ########################################################################
 
 if __name__ == '__main__':
+
+
     unittest.main(verbosity=2)

@@ -32,8 +32,10 @@ import operator
 from abc import ABCMeta, abstractmethod, abstractproperty
 from itertools import chain
 
-if sys.version_info >= (3, 0):
+try:
     from functools import reduce
+except ImportError:
+    pass
 
 try:
     from itertools import imap
@@ -44,10 +46,12 @@ except ImportError:
 def force_tuple(x):
     return x if isinstance(x, tuple) else (x, )
 
+
 def get_nargs(func):
     def _len(x): return len(x) if x else 0
     _spec = inspect.getargspec(func)
     return _len(_spec.args) - _len(_spec.defaults)
+
 
 def composer(obj, *args, **kwargs):
 

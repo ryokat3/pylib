@@ -18,10 +18,10 @@ class ComposerArgsTest(unittest.TestCase):
         _2 = composer(2)
         _3 = composer(3)
 
-        self.assertEqual(_0.getArgsSet(), (0,))
-        self.assertEqual(_1.getArgsSet(), (1,))
+        self.assertEqual(_0.argset, (0,))
+        self.assertEqual(_1.argset, (1,))
 
-        self.assertFalse(_0.getKwargsSet())
+        self.assertFalse(_0.kwargset)
 
         self.assertEqual(_0(0,1,2), 0)
         self.assertEqual(_1(0,1,2), 1)
@@ -38,10 +38,10 @@ class ComposerKwArgsTest(unittest.TestCase):
         _a3 = composer('a3')
         _a4 = composer('a4')
 
-        self.assertEqual(_a1.getKwargsSet(), ('a1',))
-        self.assertEqual(_a2.getKwargsSet(), ('a2',))
+        self.assertEqual(_a1.kwargset, ('a1',))
+        self.assertEqual(_a2.kwargset, ('a2',))
 
-        self.assertFalse(_a1.getArgsSet())
+        self.assertFalse(_a1.argset)
 
         self.assertEqual(_a1(0,1,a1=1), 1)
         self.assertEqual(_a2(0,1,a2=2,a1=1), 2)
@@ -85,7 +85,7 @@ class ComposerFunctionBind(unittest.TestCase):
         add10 = composer(operator.add, 10, _0)
 
         func = add10 >> add10
-        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func.argset, (0,))
         self.assertEqual(func(1), 21)
         self.assertEqual(func(2), 22)
 
@@ -97,19 +97,19 @@ class ComposerFunctionBind(unittest.TestCase):
 
         func = add10(add10)
 
-        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func.argset, (0,))
         self.assertEqual(func(1), 21)
         self.assertEqual(func(2), 22)
 
         func = add10 >> add10 >> add10
 
-        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func.argset, (0,))
         self.assertEqual(func(1), 31)
         self.assertEqual(func(2), 32)
 
         func = func >> add10 >> func
 
-        self.assertEqual(func.getArgsSet(), (0,))
+        self.assertEqual(func.argset, (0,))
         self.assertEqual(func(1), 71)
         self.assertEqual(func(2), 72)
 
@@ -131,7 +131,7 @@ class ComposerFunctionBind(unittest.TestCase):
         def calc(a, b):
             return a + b, a - b
         func = composer(calc)
-        self.assertEqual(func.getArgsSet(), (0,1))
+        self.assertEqual(func.argset, (0,1))
 
         func = func >> func >> func
 
@@ -144,7 +144,7 @@ class ComposerFunctionBind(unittest.TestCase):
             def __call__(self, a, b):
                 return a + b, a - b
         func = composer(calc())
-        self.assertEqual(func.getArgsSet(), (0,1))
+        self.assertEqual(func.argset, (0,1))
 
         func = func >> func >> func
 
@@ -158,7 +158,7 @@ class ComposerFunctionBind(unittest.TestCase):
             def call(cls, a, b):
                 return a + b, a - b
         func = composer(calc.call)
-        self.assertEqual(func.getArgsSet(), (0,1))
+        self.assertEqual(func.argset, (0,1))
 
         func = func >> func >> func
 
@@ -173,7 +173,7 @@ class ComposerFunctionBind(unittest.TestCase):
             def call(a, b):
                 return a + b, a - b
         func = composer(calc.call)
-        self.assertEqual(func.getArgsSet(), (0,1))
+        self.assertEqual(func.argset, (0,1))
 
         func = func >> func >> func
 

@@ -127,22 +127,29 @@ class ComposerBase(object):
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def getArgsSet(self):
+    def getArgSet(self):
         raise NotImplementedError()
 
     @abstractmethod
-    def getKwargsSet(self):
+    def getKwargSet(self):
         raise NotImplementedError()
         
     @abstractmethod
     def __call__(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @property
+    def argset(self):
+        return self.getArgSet()
+
+    @property
+    def kwargset(self):
+        return self.getKwargSet()
 
 class ComposerFunctionBase(ComposerBase):
 
     @abstractmethod
-    def applyArgs(self, *args, **kwargs):
+    def apply(self, *args, **kwargs):
         raise NotImplementedError()
 
     @abstractmethod
@@ -154,9 +161,9 @@ class ComposerFunctionBase(ComposerBase):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
-        func = self.applyArgs(*args, **kwargs)
-        return func if len(func.getArgsSet()) != 0 or \
-                len(func.getKwargsSet()) != 0 else func.run()
+        func = self.apply(*args, **kwargs)
+        return func if len(func.getArgSet()) != 0 or \
+                len(func.getKwargSet()) != 0 else func.run()
 
     def __rshift__(self, func):
         return self.bind(func)
@@ -171,10 +178,10 @@ class ComposerArgs(ComposerBase):
         return args[self.idx] if self.idx < len(args) else \
                 ComposerArgs(self.idx - len(args))
 
-    def getArgsSet(self):
+    def getArgSet(self):
         return (self.idx, )
 
-    def getKwargsSet(self):
+    def getKwargSet(self):
         return ()
 
 
@@ -186,10 +193,10 @@ class ComposerKwargs(ComposerBase):
     def __call__(self, *args, **kwargs):
          return kwargs[self.key] if self.key in kwargs else self
 
-    def getArgsSet(self):
+    def getArgSet(self):
         return ()
 
-    def getKwargsSet(self):
+    def getKwargSet(self):
         return (self.key,)
 
 
@@ -200,20 +207,20 @@ class ComposerFunction(ComposerFunctionBase):
         self.args = args
         self.kwargs = kwargs
 
-    def getArgsSet(self):
+    def getArgSet(self):
         return tuple(frozenset(reduce(operator.add, \
-                [ arg.getArgsSet() for arg in chain( \
+                [ arg.getArgSet() for arg in chain( \
                 self.args, self.kwargs.values()) \
                 if isinstance(arg, ComposerBase) ], ())))
 
-    def getKwargsSet(self):
+    def getKwargSet(self):
         return tuple(frozenset(reduce(operator.add, \
-                [arg.getKwargsSet() for arg in chain( \
+                [arg.getKwargSet() for arg in chain( \
                 self.args, self.kwargs.values()) \
                 if isinstance(arg, ComposerBase)], ())))
         
 
-    def applyArgs(self, *args, **kwargs):
+    def apply(self, *args, **kwargs):
 
         def replaceArg(arg, *args, **kwargs):
             return arg(*args, **kwargs) if \
@@ -238,17 +245,17 @@ class ComposerBind(ComposerFunctionBase):
         self.inf = inf
         self.outf = outf
 
-    def getArgsSet(self):
-        return self.inf.getArgsSet()
+    def getArgSet(self):
+        return self.inf.getArgSet()
 
-    def getKwargsSet(self):
-        return tuple(frozenset(self.inf.getKwargsSet() + \
-                self.outf.getKwargsSet()))
+    def getKwargSet(self):
+        return tuple(frozenset(self.inf.getKwargSet() + \
+                self.outf.getKwargSet()))
 
 
-    def applyArgs(self, *args, **kwargs):
-        return ComposerBind(self.inf.applyArgs(*args, **kwargs), \
-            self.outf.applyArgs(**kwargs))
+    def apply(self, *args, **kwargs):
+        return ComposerBind(self.inf.apply(*args, **kwargs), \
+            self.outf.apply(**kwargs))
 
     def run(self):
         return self.outf(*force_tuple(self.inf.run()))
@@ -262,11 +269,11 @@ class ComposerIterable(ComposerFunctionBase):
     def __init__(self, it):
         self.it = it
 
-    def getArgsSet(self): return ()
+    def getArgSet(self): return ()
 
-    def getKwargsSet(self): return ()
+    def getKwargSet(self): return ()
 
-    def applyArgs(self, *args, **kwargs): return self
+    def apply(self, *args, **kwargs): return self
 
     def run(self): return self.it
 
@@ -286,17 +293,17 @@ class ComposerIterableBind(ComposerFunctionBase):
         self.it = it
         self.func = func
 
-    def getArgsSet(self):
-        return self.it.getArgsSet()
+    def getArgSet(self):
+        return self.it.getArgSet()
 
-    def getKwargsSet(self):
-        return tuple(frozenset(self.it.getKwargsSet() + \
-                self.func.getKwargsSet()))
+    def getKwargSet(self):
+        return tuple(frozenset(self.it.getKwargSet() + \
+                self.func.getKwargSet()))
 
-    def applyArgs(self, *args, **kwargs):
+    def apply(self, *args, **kwargs):
         return ComposerIterableBind( \
-                self.it.applyArgs(*args, **kwargs), \
-                self.func.applyArgs(**kwargs))
+                self.it.apply(*args, **kwargs), \
+                self.func.apply(**kwargs))
 
     def run(self):
         return imap(self.func, self.it())

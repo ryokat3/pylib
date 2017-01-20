@@ -209,15 +209,32 @@ class ComposerIterableFunctionTest(unittest.TestCase):
         def gensub(a, b):
             for i in range(0, a - b):
                 yield i
+        add10 = composer(operator.add, 10, _0)
 
-        gen = composer(gensub)
-        self.assertEqual(tuple([ a for a in gen(10, 7) ]), (0, 1, 2))
-        self.assertEqual(tuple([ a for a in gen(10)(7) ]), (0, 1, 2))
+        gen = composer(gensub) >> add10
+        self.assertEqual(tuple([ a for a in gen(10, 7) ]), (10, 11, 12))
+        self.assertEqual(tuple([ a for a in gen(10)(7) ]), (10, 11, 12))
 
-        gen = composer(gensub, _1, _0)
-        self.assertEqual(tuple([ a for a in gen(7, 10) ]), (0, 1, 2))
-        self.assertEqual(tuple([ a for a in gen(7)(10) ]), (0, 1, 2))
+        gen = composer(gensub, _1, _0) >> add10
+        self.assertEqual(tuple([ a for a in gen(7, 10) ]), (10, 11, 12))
+        self.assertEqual(tuple([ a for a in gen(7)(10) ]), (10, 11, 12))
 
+
+    def test_iterable_composer(self):
+        _0 = composer(0)
+        _1 = composer(1)
+
+        def gensub(a, b):
+            return range(0, a - b)
+        add10 = composer(operator.add, 10, _0)
+
+        gen = iterable_composer(gensub) >> add10
+        self.assertEqual(tuple([ a for a in gen(10, 7) ]), (10, 11, 12))
+        self.assertEqual(tuple([ a for a in gen(10)(7) ]), (10, 11, 12))
+
+        gen = iterable_composer(gensub, _1, _0) >> add10
+        self.assertEqual(tuple([ a for a in gen(7, 10) ]), (10, 11, 12))
+        self.assertEqual(tuple([ a for a in gen(7)(10) ]), (10, 11, 12))
 
 
 ########################################################################

@@ -150,13 +150,16 @@ class ComposerFunctionBase(ComposerBase):
         raise NotImplementedError()
 
     @abstractmethod
-    def __rshift__(self, func):
+    def bind(self, func):
         raise NotImplementedError()
 
     def __call__(self, *args, **kwargs):
         func = self.applyArgs(*args, **kwargs)
         return func if len(func.getArgsSet()) != 0 or \
                 len(func.getKwargsSet()) != 0 else func.run()
+
+    def __rshift__(self, func):
+        return self.bind(func)
 
 
 class ComposerArgs(ComposerBase):
@@ -225,7 +228,7 @@ class ComposerFunction(ComposerFunctionBase):
     def run(self):
         return self.func(*self.args, **self.kwargs)
 
-    def __rshift__(self, outf):
+    def bind(self, outf):
         return ComposerBind(self, outf)
 
 
@@ -250,7 +253,7 @@ class ComposerBind(ComposerFunctionBase):
     def run(self):
         return self.outf(*force_tuple(self.inf.run()))
 
-    def __rshift__(self, outf):
+    def bind(self, outf):
         return ComposerBind(self, outf)
 
 
@@ -267,13 +270,13 @@ class ComposerIterable(ComposerFunctionBase):
 
     def run(self): return self.it
 
-    def __rshift__(self, func):
+    def bind(self, func):
         return ComposerIterableBind(self, func)
 
 
 class ComposerIterableFunction(ComposerFunction):
 
-    def __rshift__(self, func):
+    def bind(self, func):
         return ComposerIterableBind(self, func)
 
 
@@ -298,7 +301,7 @@ class ComposerIterableBind(ComposerFunctionBase):
     def run(self):
         return imap(self.func, self.it())
 
-    def __rshift__(self, func):
+    def bind(self, func):
         return ComposerIterableBind(self, func)
 
 

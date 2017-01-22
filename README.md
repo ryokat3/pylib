@@ -4,15 +4,18 @@
 
 **pylib** is a small library of python tool.
 
-- **Composer** : Composing functions using [Reader Monad][pymonad]
+- **Composer** : Currying and composing functions 
 
 
 ## Code Example
 
 ### Composer
 
-```
+```python
+# Composing a function to calculate (x + 3) - 10
 
+_0 = composer(0)
+func = composer(operator.add, 3) >> composer(operator.sub, _0, 10)
 ```
 
 ## Motivation
@@ -43,5 +46,3 @@ Let people know how they can dive into the project, include important links to t
 ## License
 
 This software is released under the MIT License, see LICENSE.txt.
-
-[pymonad]:https://pypi.python.org/pypi/PyMonad/ "PyMonad"

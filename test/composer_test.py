@@ -220,7 +220,7 @@ class ComposerIterableFunctionTest(unittest.TestCase):
         self.assertEqual(tuple([ a for a in gen(7)(10) ]), (10, 11, 12))
 
 
-    def test_iterable_composer(self):
+    def test_iterable_composer_iter_func(self):
         _0 = composer(0)
         _1 = composer(1)
 
@@ -237,11 +237,29 @@ class ComposerIterableFunctionTest(unittest.TestCase):
         self.assertEqual(tuple([ a for a in gen(7)(10) ]), (10, 11, 12))
 
 
+    def test_iterable_composer_iter_iter(self):
+        _0 = composer(0)
+        _1 = composer(1)
+
+        def gen(a):
+            for i in range(0, a):
+                yield i
+
+        def mod(it, x):
+            for i in it:
+                if (i % x) == 0:
+                    yield i
+
+        func = composer(gen) >> composer(mod, _0, 2)
+        self.assertEqual(tuple(list(func(10))), (0,2,4,6,8))
+
+
+
+
+
 ########################################################################
 # main
 ########################################################################
 
 if __name__ == '__main__':
-
-
     unittest.main(verbosity=2)

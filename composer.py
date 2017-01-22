@@ -168,7 +168,6 @@ class ComposerFunctionBase(ComposerBase):
     def __rshift__(self, func):
         return self.bind(func)
 
-
 class ComposerArgs(ComposerBase):
 
     def __init__(self, idx):
@@ -226,7 +225,7 @@ class ComposerFunction(ComposerFunctionBase):
             return arg(*args, **kwargs) if \
                     isinstance(arg, ComposerBase) else arg
 
-        return ComposerFunction(self.func, \
+        return self.__class__(self.func, \
             *(tuple([replaceArg(arg, *args, **kwargs) \
                 for arg in self.args])), \
             **(dict([(key, replaceArg(value, *args, **kwargs)) \
@@ -264,7 +263,11 @@ class ComposerBind(ComposerFunctionBase):
         return ComposerBind(self, outf)
 
 
-class ComposerIterable(ComposerFunctionBase):
+class ComposerIterableBase(ComposerFunction):
+    pass
+
+
+class ComposerIterable(ComposerIterableBase):
 
     def __init__(self, it):
         self.it = it
@@ -281,13 +284,13 @@ class ComposerIterable(ComposerFunctionBase):
         return ComposerIterableBind(self, func)
 
 
-class ComposerIterableFunction(ComposerFunction):
+class ComposerIterableFunction(ComposerIterableBase):
 
     def bind(self, func):
         return ComposerIterableBind(self, func)
 
 
-class ComposerIterableBind(ComposerFunctionBase):
+class ComposerIterableBind(ComposerIterableBase):
 
     def __init__(self, it, func):
         self.it = it
@@ -301,15 +304,18 @@ class ComposerIterableBind(ComposerFunctionBase):
                 self.func.getKwargSet()))
 
     def apply(self, *args, **kwargs):
-        return ComposerIterableBind( \
+        return self.__class__( \
                 self.it.apply(*args, **kwargs), \
                 self.func.apply(**kwargs))
 
     def run(self):
-        return imap(self.func, self.it())
+        if isinstance(self.func, ComposerIterableBase):
+            return self.func(*force_tuple(self.it()))
+        else:
+            return (self.func(*force_tuple(args)) for args in self.it())
 
     def bind(self, func):
-        return ComposerIterableBind(self, func)
+        return self.__class__(self, func)
 
 
 ########################################################################

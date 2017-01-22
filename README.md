@@ -11,12 +11,20 @@
 
 ### Composer
 
-```python
-# Composing a function to calculate (x + 3) - 10
+#### Example to curry functions with positional arguments
 
+```python
+# _0 is a place holder for positional argument
 _0 = composer(0)
-func = composer(operator.add, 3) >> composer(operator.sub, _0, 10)
+
+# Composing a function to calculate (x + 3) - 10
+func = composer(operator.add, _0, 3) >> composer(operator.sub, _0, 10)
+
+# Print '17' as a result
+print(func(20))
 ```
+
+#### Example to curry functions with keyword arguments
 
 ```python
 # _0 :          a place holder for positional argument

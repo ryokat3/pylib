@@ -35,9 +35,9 @@ _add_val = composer('add_val')
 _sub_val = composer('sub_val')
 
 # Composing a function to calculate (x + 3) - 10
-func_temp = composer(operator.add, _0, _add_val) >> \
+func_tmpl = composer(operator.add, _0, _add_val) >> \
         composer(operator.sub, _0, _sub_val)
-func = func_tmp(add_val=3, sub_val=10)
+func = func_tmpl(add_val=3, sub_val=10)
 
 # Print '13' as a result
 print(func(20))

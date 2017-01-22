@@ -10,6 +10,44 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from composer import *
 
+class SampleTest(unittest.TestCase):
+
+    def test1(self):
+
+        # _0 is a place holder for positional argument
+        _0 = composer(0)
+
+        # Composing a function to calculate (x + 3) - 10
+        func = composer(operator.add, _0, 3) >> composer(operator.sub, _0, 10)
+
+        # Print '17' as a result
+        print(func(20))
+
+    def test2(self):
+
+        # _0 :          a place holder for positional argument
+        # _add_val : a place holder for keyword argument 'add_val'
+        # _sub_val : a place holder for keyword argument 'sub_val'
+        _0 = composer(0)
+        _add_val = composer('add_val')
+        _sub_val = composer('sub_val')
+
+        # Composing a function to calculate (x + 3) - 10
+        func_tmp = composer(operator.add, _0, _add_val) >> \
+                composer(operator.sub, _0, _sub_val)
+        func = func_tmp(add_val=3, sub_val=10)
+
+        # Print '17' as a result
+        print(func(20))
+
+
+        # Composing a function to calculate (x + 13) - 20
+        func = func_tmp(add_val=13, sub_val=20)
+
+        # Print '17' as a result
+        print(func(20))
+
+
 class ComposerArgsTest(unittest.TestCase):
 
     def test(self):

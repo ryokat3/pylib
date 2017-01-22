@@ -254,6 +254,24 @@ class ComposerIterableFunctionTest(unittest.TestCase):
         self.assertEqual(tuple(list(func(10))), (0,2,4,6,8))
 
 
+    def test_iterable_composer_iter_func_iter(self):
+        _0 = composer(0)
+        _1 = composer(1)
+
+        def gen(a):
+            for i in range(0, a):
+                yield i
+
+        def mod(it, x):
+            for i in it:
+                if (i % x) == 0:
+                    yield i
+
+        add10 = composer(operator.add, 10, _0)
+
+        func = composer(gen) >> add10 >> composer(mod, _0, 2)
+        self.assertEqual(tuple(list(func(10))), (10,12,14,16,18))
+
 
 
 

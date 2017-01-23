@@ -25,6 +25,7 @@
 # THE SOFTWARE.
 #
 
+import inspect
 import threading
 
 class Singleton(type):
@@ -34,8 +35,8 @@ class Singleton(type):
         dic['__instance_lock__'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
 
-
     def __call__(self, *args, **kwargs):
+        
         with self.__instance_lock__:
             if self.__instance__ == None:
                 self.__instance__ = type.__call__(self, *args, **kwargs)
@@ -45,17 +46,28 @@ class Singleton(type):
 class ParameterizedSingleton(type):
 
     def __new__(cls, name, bases, dic):
+        # TODO: How can I get mangled '__init__' 
+        dic['__init_func__'] = None
+        for key, value in dic.items():
+            if key == '__init__':
+                dic['__init_func__'] = value
+                break
         dic['__instance_dict__'] = {}
         dic['__instance_dict_lock__'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
 
 
     def __call__(self, *args, **kwargs):
+        if self.__init_func__ != None:
+            key = tuple(inspect.getcallargs(self.__init_func__, \
+                    self, *args, **kwargs).items()[1:])
+        else:
+            key = ()
         with self.__instance_dict_lock__:
-            if not args in self.__instance_dict__:
-                self.__instance_dict__[args] = \
+            if not key in self.__instance_dict__:
+                self.__instance_dict__[key] = \
                         type.__call__(self, *args, **kwargs)
-        return self.__instance_dict__[args]
+        return self.__instance_dict__[key]
 
 ########################################################################
 # main

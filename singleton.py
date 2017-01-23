@@ -28,17 +28,34 @@
 import threading
 
 class Singleton(type):
+
     def __new__(cls, name, bases, dic):
-        dic['__singleton__'] = None
-        dic['__singleton_lock__'] = threading.Lock()
+        dic['__instance__'] = None
+        dic['__instance_lock__'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
 
 
     def __call__(self, *args, **kwargs):
-        with self.__singleton_lock__:
-            if self.__singleton__ == None:
-                self.__singleton__ = type.__call__(self, *args, **kwargs)
-        return self.__singleton__
+        with self.__instance_lock__:
+            if self.__instance__ == None:
+                self.__instance__ = type.__call__(self, *args, **kwargs)
+        return self.__instance__
+
+
+class ParameterizedSingleton(type):
+
+    def __new__(cls, name, bases, dic):
+        dic['__instance_dict__'] = {}
+        dic['__instance_dict_lock__'] = threading.Lock()
+        return type.__new__(cls, name, bases, dic)
+
+
+    def __call__(self, *args, **kwargs):
+        with self.__instance_dict_lock__:
+            if not args in self.__instance_dict__:
+                self.__instance_dict__[args] = \
+                        type.__call__(self, *args, **kwargs)
+        return self.__instance_dict__[args]
 
 ########################################################################
 # main

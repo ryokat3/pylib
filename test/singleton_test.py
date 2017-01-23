@@ -24,6 +24,24 @@ class SingletonTest(unittest.TestCase):
 
         self.assertEqual(inst1.val, 1)
         self.assertEqual(inst2.val, 1)
+        self.assertEqual(inst1, inst2)
+
+class ParameterizedSingletonTest(unittest.TestCase):
+
+    def test1(self):
+
+        class Test(ParameterizedSingleton('Test', (object,), {})):
+
+            def __init__(self, val):
+                self.val = val
+
+        inst1 = Test(1)
+        inst2 = Test(2)
+        inst2a = Test(2)
+
+        self.assertEqual(inst1.val, 1)
+        self.assertEqual(inst2.val, 2)
+        self.assertEqual(inst2, inst2a)
 
 ########################################################################
 # main

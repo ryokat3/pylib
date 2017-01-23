@@ -26,7 +26,6 @@
 #
 
 import inspect
-import operator
 import threading
 
 class Singleton(type):

@@ -26,48 +26,44 @@
 #
 
 import inspect
+import operator
 import threading
 
 class Singleton(type):
 
     def __new__(cls, name, bases, dic):
-        dic['__instance__'] = None
-        dic['__instance_lock__'] = threading.Lock()
+        dic['_instance'] = None
+        dic['_instance_lock'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
 
     def __call__(self, *args, **kwargs):
         
-        with self.__instance_lock__:
-            if self.__instance__ == None:
-                self.__instance__ = type.__call__(self, *args, **kwargs)
-        return self.__instance__
+        with self._instance_lock:
+            if self._instance == None:
+                self._instance = type.__call__(self, *args, **kwargs)
+        return self._instance
 
 
 class ParameterizedSingleton(type):
 
     def __new__(cls, name, bases, dic):
-        # TODO: How can I get mangled '__init__' 
-        dic['__init_func__'] = None
-        for key, value in dic.items():
-            if key == '__init__':
-                dic['__init_func__'] = value
-                break
-        dic['__instance_dict__'] = {}
-        dic['__instance_dict_lock__'] = threading.Lock()
+        dic['_init_func'] = dic.get('__init__') if '__init__' in dic else None
+        dic['_instance_dict'] = {}
+        dic['_instance_dict_lock'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
 
 
     def __call__(self, *args, **kwargs):
-        if self.__init_func__ != None:
-            key = tuple(inspect.getcallargs(self.__init_func__, \
+        if self._init_func != None:
+            key = tuple(inspect.getcallargs(self._init_func, \
                     self, *args, **kwargs).items()[1:])
         else:
             key = ()
-        with self.__instance_dict_lock__:
-            if not key in self.__instance_dict__:
-                self.__instance_dict__[key] = \
+        with self._instance_dict_lock:
+            if not key in self._instance_dict:
+                self._instance_dict[key] = \
                         type.__call__(self, *args, **kwargs)
-        return self.__instance_dict__[key]
+        return self._instance_dict[key]
 
 ########################################################################
 # main

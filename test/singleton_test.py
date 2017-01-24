@@ -64,6 +64,17 @@ class ParameterizedSingletonTest(unittest.TestCase):
 
         self.assertNotEqual(i4, j1)
 
+    def test1(self):
+
+        class Test(ParameterizedSingleton('Test', (object,), {})):
+            pass
+
+
+        inst1 = Test()
+        inst2 = Test()
+
+        self.assertEqual(inst1, inst2)
+
 ########################################################################
 # main
 ########################################################################

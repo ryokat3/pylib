@@ -54,8 +54,9 @@ class ParameterizedSingleton(type):
 
     def __call__(self, *args, **kwargs):
         if self._init_func != None:
-            key = tuple(inspect.getcallargs(self._init_func, \
-                    self, *args, **kwargs).items()[1:])
+            key = tuple(sorted([ (key, val) for key, val in \
+                    inspect.getcallargs(self._init_func, \
+                    self, *args, **kwargs).items() if val != self ]))
         else:
             key = ()
         with self._instance_dict_lock:

@@ -69,6 +69,8 @@ def composer(obj, *args, **kwargs):
             return ComposerArgs(obj)
         elif isinstance(obj, str):
             return ComposerKwargs(obj)
+        elif inspect.isbuiltin(obj):
+            return ComposerBuiltin(obj)
         elif inspect.isgeneratorfunction(obj):
             return ComposerIterableFunction(obj, \
                     *(tuple([ ComposerArgs(idx) for idx in \
@@ -237,6 +239,32 @@ class ComposerFunction(ComposerFunctionBase):
     def bind(self, outf):
         return ComposerBind(self, outf)
 
+class ComposerBuiltin(ComposerFunctionBase):
+
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def getArgSet(self): return ()
+
+    def getKwargSet(self): return ()
+
+    def apply(self, *args, **kwargs):
+        self.kwargs.update(kwargs)
+        return ComposerBuiltin(self.func,
+                *(self.args + args), **(self.kwargs))
+
+    def run(self):
+        for nargs in range(0, len(self.args)+1):
+            try:
+                return self.func(*self.args[0:nargs], **self.kwargs)
+            except TypeError:
+                continue
+        return self
+
+    def bind(self, outf):
+        return ComposerBind(self, outf)
 
 class ComposerBind(ComposerFunctionBase):
 

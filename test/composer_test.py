@@ -107,6 +107,35 @@ class ComposerFunctionTest(unittest.TestCase):
         self.assertEqual(sub(a1=10)(1000, 1), 9)
 
 
+class ComposerBuiltinTest(unittest.TestCase):
+
+    def test_solo(self):
+        add = composer(operator.add)
+        self.assertEqual(add(1,2), 3)
+        self.assertEqual(add(1)(2), 3)
+        self.assertEqual(add(1)(2,3), 3)
+
+    def test_combo(self):
+        add = composer(operator.add)
+        sub = composer(operator.sub)
+        func = add(1) >> sub(100)
+        self.assertEqual(func(1), 98)
+        self.assertEqual(func(10), 89)
+        func = add(100) >> sub(200)
+        self.assertEqual(func(12), 88)
+
+    def test_combo2(self):
+        _0 = composer(0)
+        _1 = composer(1)
+        add = composer(operator.add)
+        sub = composer(operator.sub, _0, _1)
+        func = add(1) >> sub(100)
+        self.assertEqual(func(1), 98)
+        self.assertEqual(func(10), 89)
+        func = add(100) >> sub(200)
+        self.assertEqual(func(12), 88)
+
+
 class ComposerFunctionBind(unittest.TestCase):
 
     def test_bind_1(self):

@@ -43,7 +43,7 @@ class Singleton(type):
         return self._instance
 
 
-class ParameterizedSingleton(type):
+class SingletonDict(type):
 
     def __new__(cls, name, bases, dic):
         dic['_init_func'] = dic.get('__init__') if '__init__' in dic else None

@@ -26,11 +26,11 @@ class SingletonTest(unittest.TestCase):
         self.assertEqual(inst2.val, 1)
         self.assertEqual(inst1, inst2)
 
-class ParameterizedSingletonTest(unittest.TestCase):
+class SingletonDictTest(unittest.TestCase):
 
     def test1(self):
 
-        class Test(ParameterizedSingleton('Test', (object,), {})):
+        class Test(SingletonDict('Test', (object,), {})):
 
             def __init__(self, val):
                 self.val = val
@@ -45,7 +45,7 @@ class ParameterizedSingletonTest(unittest.TestCase):
 
     def test2(self):
 
-        class Test(ParameterizedSingleton('Test', (object,), {})):
+        class Test(SingletonDict('Test', (object,), {})):
 
             def __init__(self, a, b, c=3):
                 pass
@@ -66,7 +66,7 @@ class ParameterizedSingletonTest(unittest.TestCase):
 
     def test1(self):
 
-        class Test(ParameterizedSingleton('Test', (object,), {})):
+        class Test(SingletonDict('Test', (object,), {})):
             pass
 
 

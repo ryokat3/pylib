@@ -57,7 +57,11 @@ class SingletonDict(type):
             ignore = object()
             key = tuple(sorted([ (key, val) for key, val in \
                     inspect.getcallargs(self._init_func, \
-                    ignore, *args, **kwargs).items() if val != ignore ]))
+                    ignore, *args, **kwargs).items() \
+                    if val != ignore and \
+                    ((hasattr(self, '_key_args') and key in self._key_args) \
+                    or not hasattr(self, '_key_args'))]))
+
         else:
             key = ()
         with self._instance_dict_lock:

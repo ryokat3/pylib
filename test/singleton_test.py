@@ -64,7 +64,7 @@ class SingletonDictTest(unittest.TestCase):
 
         self.assertNotEqual(i4, j1)
 
-    def test1(self):
+    def test3(self):
 
         class Test(SingletonDict('Test', (object,), {})):
             pass
@@ -74,6 +74,26 @@ class SingletonDictTest(unittest.TestCase):
         inst2 = Test()
 
         self.assertEqual(inst1, inst2)
+
+    def test_key_args(self):
+
+        class Test(SingletonDict('Test', (object,), {})):
+
+            _key_args = ('a', 'b')
+
+            def __init__(self, a, b, c):
+                self.a = a
+                self.b = b
+                self.c = c
+
+        i1 = Test(1, 2, 3)
+        i2 = Test(1, b=2, c=4)
+        i3 = Test(1, b=3, c=3)
+
+        self.assertEqual(i2.c, 3)
+        self.assertEqual(i1, i2)
+        self.assertNotEqual(i1, i3)
+
 
 ########################################################################
 # main

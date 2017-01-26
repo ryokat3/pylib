@@ -76,10 +76,6 @@ class SingletonDict(type):
 
 if __name__ == '__main__':
     import unittest
-    import os
-    import sys
-
-    sys.path.append(os.path.join(os.path.dirname(__file__), 'test'))
-    from singleton_test import *
+    from test.singleton_test import *
 
     unittest.main(verbosity=2)

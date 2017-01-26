@@ -148,6 +148,10 @@ class ComposerBase(object):
     def kwargset(self):
         return self.getKwargSet()
 
+    def __or__(self, right):
+        return ComposerOr(self, right)
+
+
 class ComposerFunctionBase(ComposerBase):
 
     @abstractmethod
@@ -286,6 +290,31 @@ class ComposerBind(ComposerFunctionBase):
 
     def run(self):
         return self.outf(*force_tuple(self.inf.run()))
+
+    def bind(self, outf):
+        return ComposerBind(self, outf)
+
+
+class ComposerOr(ComposerFunctionBase):
+
+    def __init__(self, left, right):
+        self.left = left
+        self.right = right 
+
+    def getArgSet(self):
+        return tuple(frozenset(self.left.getArgSet() + \
+                self.right.getArgSet()))
+
+    def getKwargSet(self):
+        return tuple(frozenset(self.left.getKwargSet() + \
+                self.right.getKwargSet()))
+
+    def apply(self, *args, **kwargs):
+        return ComposerOr(self.left.apply(*args, **kwargs), \
+            self.right.apply(*args, **kwargs))
+
+    def run(self):
+        return (self.left.run(), self.right.run())
 
     def bind(self, outf):
         return ComposerBind(self, outf)

@@ -240,6 +240,29 @@ class ComposerFunctionBind(unittest.TestCase):
         self.assertEqual(func(20)(10), (60, 20))
 
 
+class ComposerOr(unittest.TestCase):
+
+    def test_1(self):
+        func = composer(operator.add) | composer(operator.sub)
+        self.assertEqual(func(10, 5), (15, 5))
+
+    def test_2(self):
+        func = composer(operator.add) | composer(operator.sub) \
+                >> composer(operator.add)(10)
+        self.assertEqual(func(10, 5), (15, 15))
+
+    def test_3(self):
+        func = (composer(operator.add) | composer(operator.sub)) \
+                >> composer(operator.add)
+        self.assertEqual(func(10, 5), 20)
+
+    def test_4(self):
+        func = (composer(operator.add) | composer(operator.sub)) >> \
+                (composer(operator.add) | composer(operator.sub)) \
+                >> composer(operator.add)
+        self.assertEqual(func(10, 5), 30)
+
+
 class ComposerIterableTest(unittest.TestCase):
 
     def test_iterable(self):

@@ -79,7 +79,7 @@ class SingletonDictTest(unittest.TestCase):
 
         class Test(SingletonDict('Test', (object,), {})):
 
-            _key_args = ('a', 'b')
+            KEY_ARGS = ('a', 'b')
 
             def __init__(self, a, b, c):
                 self.a = a

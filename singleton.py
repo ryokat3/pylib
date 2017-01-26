@@ -59,9 +59,9 @@ class SingletonDict(type):
                     inspect.getcallargs(self._init_func, \
                     ignore, *args, **kwargs).items() \
                     if val != ignore and \
-                    ((hasattr(self, '_key_args') and key in self._key_args) \
-                    or not hasattr(self, '_key_args'))]))
-
+                    ((hasattr(self, 'KEY_ARGS') and \
+                    key in getattr(self, 'KEY_ARGS')) \
+                    or not hasattr(self, 'KEY_ARGS'))]))
         else:
             key = ()
         with self._instance_dict_lock:

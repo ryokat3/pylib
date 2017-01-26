@@ -135,6 +135,20 @@ class ComposerBuiltinTest(unittest.TestCase):
         func = add(100) >> sub(200)
         self.assertEqual(func(12), 88)
 
+    def test_1(self):
+        def ret10():
+            return 10
+        func = composer(ret10)
+        self.assertNotEqual(func, 10)
+        self.assertEqual(func(), 10)
+
+    def test_2(self):
+        def ret10():
+            return 10
+        func = composer(ret10) >> composer(operator.add)(10)
+        self.assertNotEqual(func, 20)
+        self.assertEqual(func(), 20)
+
 
 class ComposerFunctionBind(unittest.TestCase):
 

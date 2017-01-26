@@ -96,7 +96,6 @@ class ComposerFunctionTest(unittest.TestCase):
         self.assertEqual(sub(a1=10, a2=1), 9)
         self.assertEqual(sub(a2=1)(a1=10), 9)
 
-
     def test_MixedArgs(self):
         _1 = composer(1)
         _a1 = composer('a1')
@@ -105,6 +104,18 @@ class ComposerFunctionTest(unittest.TestCase):
         self.assertEqual(sub(1000, 1, a1=10), 9)
         self.assertEqual(sub(1000)(1)(a1=10), 9)
         self.assertEqual(sub(a1=10)(1000, 1), 9)
+
+    def test_asfunc(self):
+
+        comp = composer(lambda x: x+1)
+        add = composer(operator.add, comp, 2)
+        self.assertEqual(add(1), 4)
+
+        def do(func, arg):
+            return func(arg)
+        self.assertEqual(composer(do)(comp.asfunc())(3), 4)
+        with self.assertRaises(TypeError):
+            composer(do)(comp)(3)
 
 
 class ComposerBuiltinTest(unittest.TestCase):

@@ -151,11 +151,6 @@ class ComposerBase(object):
     def __or__(self, right):
         return ComposerOr(self, right)
 
-    def asfunc(self):
-        def _(*args, **kwargs):
-            return self.__call__(*args, **kwargs)
-        return _
-
 
 class ComposerFunctionBase(ComposerBase):
 

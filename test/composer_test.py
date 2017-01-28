@@ -7,7 +7,7 @@ import sys
 import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-import composer import *
+from composer import *
 
 
 class SampleTest(unittest.TestCase):

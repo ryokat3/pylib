@@ -151,9 +151,9 @@ class ComposerBase(object):
     def __or__(self, right):
         return ComposerOr(self, right)
 
-    def asfunc(self):
+    def __invert__(self):
         def _(*args, **kwargs):
-            return self.__call__(*args, **kwargs)
+            return self(*args, **kwargs)
         return _
 
 
@@ -208,6 +208,27 @@ class ComposerKwargs(ComposerBase):
 
     def getKwargSet(self):
         return (self.key,)
+
+
+class ComposerValue(ComposerFunctionBase):
+
+    def __init__(self, val):
+        self.val = val
+
+    def getArgSet(self):
+        return ()
+
+    def getKwargSet(self):
+        return ()
+        
+    def apply(self, *args, **kwargs):
+        return self
+
+    def run(self, *args, **kwargs):
+        return self.val
+
+    def __invert__(self):
+        return self.val
 
 
 class ComposerFunction(ComposerFunctionBase):
@@ -304,7 +325,8 @@ class ComposerOr(ComposerFunctionBase):
 
     def __init__(self, left, right):
         self.left = left
-        self.right = right 
+        self.right = right if isinstance(right, ComposerBase) \
+                else ComposerValue(right)
 
     def getArgSet(self):
         return tuple(frozenset(self.left.getArgSet() + \

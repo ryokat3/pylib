@@ -40,6 +40,20 @@ class SampleTest(unittest.TestCase):
         print(func(20))
 
 
+class ComposerValueTest(unittest.TestCase):
+
+    def test(self):
+        arg = ComposerValue(1)
+        self.assertEqual(arg(), 1)
+
+        arg = ComposerValue(operator.add)
+        self.assertEqual(arg(), operator.add)
+
+        func = composer(operator.add)
+        arg = ComposerValue(func)
+        self.assertEqual(arg(), func)
+
+
 class ComposerArgsTest(unittest.TestCase):
 
     def test(self):
@@ -105,17 +119,18 @@ class ComposerFunctionTest(unittest.TestCase):
         self.assertEqual(sub(1000)(1)(a1=10), 9)
         self.assertEqual(sub(a1=10)(1000, 1), 9)
 
-    def test_asfunc(self):
+    def test_invert(self):
 
         comp = composer(lambda x: x+1)
         add = composer(operator.add, comp, 2)
         self.assertEqual(add(1), 4)
 
         def do(func, arg):
-            return func(arg)
-        self.assertEqual(composer(do)(comp.asfunc())(3), 4)
-        with self.assertRaises(TypeError):
-            composer(do)(comp)(3)
+            return func(arg) if inspect.isfunction(func) else (func, arg)
+        self.assertEqual(composer(do)(lambda x: x+1)(3), 4)
+        self.assertEqual(composer(do)(comp)(3), (4, 3))
+
+        self.assertEqual(composer(do)(~comp)(3), 4)
 
 
 class ComposerBuiltinTest(unittest.TestCase):
@@ -286,6 +301,12 @@ class ComposerOr(unittest.TestCase):
                 (composer(operator.add) | composer(operator.sub)) \
                 >> composer(operator.add)
         self.assertEqual(func(10, 5), 30)
+
+    def test_5(self):
+        func = (composer(operator.add) | composer(operator.sub)) >> \
+                (composer(operator.add) | 20) \
+                >> composer(operator.add)
+        self.assertEqual(func(10, 5), 40)
 
 
 class ComposerIterableTest(unittest.TestCase):

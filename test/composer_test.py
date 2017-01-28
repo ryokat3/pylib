@@ -2,13 +2,13 @@
 #
 
 import operator
-import unittest
-
 import os
 import sys
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import unittest
 
-from composer import *
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+import composer import *
+
 
 class SampleTest(unittest.TestCase):
 
@@ -122,11 +122,13 @@ class ComposerFunctionTest(unittest.TestCase):
     def test_invert(self):
 
         comp = composer(lambda x: x+1)
+        self.assertEqual(comp(3), 4)
+        self.assertTrue(callable(comp))
         add = composer(operator.add, comp, 2)
         self.assertEqual(add(1), 4)
 
         def do(func, arg):
-            return func(arg) if inspect.isfunction(func) else (func, arg)
+            return func(arg) if callable(func) else (func, arg)
         self.assertEqual(composer(do)(lambda x: x+1)(3), 4)
         self.assertEqual(composer(do)(comp)(3), (4, 3))
 
@@ -212,7 +214,6 @@ class ComposerFunctionBind(unittest.TestCase):
         self.assertEqual(func(1), 71)
         self.assertEqual(func(2), 72)
 
-
     def test_bind_multiple_values(self):
         _0 = composer(0)
         _1 = composer(1)
@@ -263,7 +264,6 @@ class ComposerFunctionBind(unittest.TestCase):
 
         self.assertEqual(func(20, 10), (60, 20))
         self.assertEqual(func(20)(10), (60, 20))
-
 
     def test_wrap_staticmethod(self):
 
@@ -401,11 +401,10 @@ class ComposerIterableFunctionTest(unittest.TestCase):
         self.assertEqual(tuple(list(func(10))), (10,12,14,16,18))
 
 
-
-
 ########################################################################
 # main
 ########################################################################
 
 if __name__ == '__main__':
+
     unittest.main(verbosity=2)

@@ -179,6 +179,7 @@ class ComposerFunctionBase(ComposerBase):
     def __rshift__(self, func):
         return self.bind(func)
 
+
 class ComposerArgs(ComposerBase):
 
     def __init__(self, idx):
@@ -227,6 +228,9 @@ class ComposerValue(ComposerFunctionBase):
     def run(self, *args, **kwargs):
         return self.val
 
+    def bind(self, func):
+        raise NotImplementedError()
+
     def __invert__(self):
         return self.val
 
@@ -250,7 +254,6 @@ class ComposerFunction(ComposerFunctionBase):
                 self.args, self.kwargs.values()) \
                 if isinstance(arg, ComposerBase)], ())))
         
-
     def apply(self, *args, **kwargs):
 
         def replaceArg(arg, *args, **kwargs):
@@ -268,6 +271,7 @@ class ComposerFunction(ComposerFunctionBase):
 
     def bind(self, outf):
         return ComposerBind(self, outf)
+
 
 class ComposerBuiltin(ComposerFunctionBase):
 
@@ -308,7 +312,6 @@ class ComposerBind(ComposerFunctionBase):
     def getKwargSet(self):
         return tuple(frozenset(self.inf.getKwargSet() + \
                 self.outf.getKwargSet()))
-
 
     def apply(self, *args, **kwargs):
         return ComposerBind(self.inf.apply(*args, **kwargs), \

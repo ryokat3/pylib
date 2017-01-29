@@ -38,7 +38,14 @@ class SelectExt(object):
         self.error_handlers = {}
 
         self.rlock = threading.RLock()
+        self.notify_lock = threading.Lock()
         self.pair = socket.socketpair()
+
+    def __del__(self):
+        self.pair[0].shutdown(socket.SHUT_RDWR)
+        self.pair[1].shutdown(socket.SHUT_RDWR)
+        self.pair[0].close()
+        self.pair[1].close()
 
     def set_reader(self, sock, callback):
         with self.rlock:
@@ -65,7 +72,8 @@ class SelectExt(object):
             del self.error_handlers[sock]
 
     def notify(self):
-        self.pair[1].send('#')
+        with self.notify_lock:
+            self.pair[1].send('@')
           
     def wait(self, timeout=0):
 

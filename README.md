@@ -7,6 +7,8 @@
 
 - **Singleton**: Simple Singleton and Parameterized Singleton
 
+- **SelectExt**: A wrapper class for select 
+
 
 
 ## Motivation

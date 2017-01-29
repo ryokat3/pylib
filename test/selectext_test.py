@@ -23,26 +23,21 @@ class UDPEchoServerTest(unittest.TestCase):
         return sock
 
     def setUp(self):
-        self.addr1 = "127.0.0.1"
-        self.port1 = 50000
-        self.sock1 = self.createUDPSocket(self.addr1, self.port1)
-
-        self.addr2 = "127.0.0.1"
-        self.port2 = 50001
-        self.sock2 = self.createUDPSocket(self.addr2, self.port2)
+        self.ssock = self.createUDPSocket("127.0.0.1", 0)
+        self.csock = self.createUDPSocket("127.0.0.1", 0)
 
     def tearDown(self):
-        self.sock1.close()
-        self.sock2.close()
+        self.ssock.close()
+        self.csock.close()
 
     def test_udp_echo(self):
 
         event = threading.Event()
 
         selectext = SelectExt()
-        selectext.set_reader(self.sock1, event.set)
-        selectext.set_reader(self.sock2, \
-                lambda: self.sock2.sendto(*self.sock2.recvfrom(2048)))
+        selectext.set_reader(self.csock, event.set)
+        selectext.set_reader(self.ssock, \
+                lambda: self.ssock.sendto(*self.ssock.recvfrom(2048)))
 
         def loop():
             while selectext.wait():
@@ -54,16 +49,17 @@ class UDPEchoServerTest(unittest.TestCase):
             th.start()
     
             msg = bytes(b"Hello, world")
-            self.sock1.sendto(msg, (self.addr2, self.port2))
+            self.csock.sendto(msg, self.ssock.getsockname())
             if event.wait():
-                recv_msg, peer = self.sock1.recvfrom(2048)
+                event.clear()
+                recv_msg, peer = self.csock.recvfrom(2048)
                 self.assertEqual(msg, recv_msg)
     
             msg = bytes(b"Good-bye, workd")
-            self.sock1.sendto(msg, (self.addr2, self.port2))
+            self.csock.sendto(msg, self.ssock.getsockname())
             if event.wait():
                 event.clear()
-                recv_msg, peer = self.sock1.recvfrom(2048)
+                recv_msg, peer = self.csock.recvfrom(2048)
                 self.assertEqual(msg, recv_msg)
     
             self.assertTrue(th.is_alive())
@@ -85,17 +81,12 @@ class TCPEchoServerTest(unittest.TestCase):
         return sock
 
     def setUp(self):
-        self.addr1 = "127.0.0.1"
-        self.port1 = 45723
-        self.sock1 = self.createTCPSocket(self.addr1, self.port1)
-
-        self.addr2 = "127.0.0.1"
-        self.port2 = 0
-        self.sock2 = self.createTCPSocket(self.addr2, self.port2)
+        self.ssock = self.createTCPSocket("127.0.0.1", 0)
+        self.csock = self.createTCPSocket("127.0.0.1", 0)
 
     def tearDown(self):
-        self.sock1.close()
-        self.sock2.close()
+        self.ssock.close()
+        self.csock.close()
 
     def test_tcp_echo(self):
 
@@ -104,43 +95,45 @@ class TCPEchoServerTest(unittest.TestCase):
         selectext = SelectExt()
 
         def establish():
-            conn, peer = self.sock1.accept()
+            conn, peer = self.ssock.accept()
             selectext.set_reader(conn, lambda: conn.send(conn.recv(2048)))
 
-        self.sock1.listen(10)
+        self.ssock.listen(10)
 
-        selectext.set_reader(self.sock1, establish)
-        selectext.set_reader(self.sock2, event.set)
+        selectext.set_reader(self.ssock, establish)
+        selectext.set_reader(self.csock, event.set)
             
+        self.csock.connect(self.ssock.getsockname())
+
         def loop():
             while selectext.wait():
                 pass
 
-        th = threading.Thread(target=loop, name="select loop")
-        th.start()
-
-        self.sock2.connect((self.addr1, self.port1))
-
-        msg = bytes(b"Hello, world")
-        self.sock2.send(msg)
-        if event.wait():
-            recv_msg = self.sock2.recv(2048)
-            self.assertEqual(msg, recv_msg)
-
-        msg = bytes(b"Good-bye, workd")
-        self.sock2.send(msg)
-        if event.wait():
-            event.clear()
-            recv_msg = self.sock2.recv(2048)
-            self.assertEqual(msg, recv_msg)
-
-        self.assertTrue(th.is_alive())
-
-        selectext.notify()
-
-        th.join()
-
-        self.assertFalse(th.is_alive())
+        for count in range(0,6):
+            th = threading.Thread(target=loop, name="select loop")
+            th.start()
+    
+            msg = bytes(b"Hello, world")
+            self.csock.send(msg)
+            if event.wait():
+                event.clear()
+                recv_msg = self.csock.recv(2048)
+                self.assertEqual(msg, recv_msg)
+    
+            msg = bytes(b"Good-bye, workd")
+            self.csock.send(msg)
+            if event.wait():
+                event.clear()
+                recv_msg = self.csock.recv(2048)
+                self.assertEqual(msg, recv_msg)
+    
+            self.assertTrue(th.is_alive())
+    
+            selectext.notify()
+    
+            th.join()
+    
+            self.assertFalse(th.is_alive())
 
 
 ########################################################################

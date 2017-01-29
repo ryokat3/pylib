@@ -93,6 +93,7 @@ class SelectExt(object):
                 self.error_handlers[sock]()
 
             if self.pair[0] in ready_to_read:
+                # TODO: any better way to clear the socket completely ?
                 self.pair[0].recv(4096)
                 return False
             else:

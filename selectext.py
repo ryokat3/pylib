@@ -30,7 +30,6 @@ import socket
 import threading
 
 
-
 try:
     from socket import socketpair
 except ImportError:

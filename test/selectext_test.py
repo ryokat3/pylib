@@ -21,75 +21,57 @@ class SelectExtTest(unittest.TestCase):
 
         return sock
 
+    def setUp(self):
+        self.addr1 = "127.0.0.1"
+        self.port1 = 50000
+        self.sock1 = self.createUDPSocket(self.addr1, self.port1)
+
+        self.addr2 = "127.0.0.1"
+        self.port2 = 50001
+        self.sock2 = self.createUDPSocket(self.addr2, self.port2)
+
+    def tearDown(self):
+        self.sock1.close()
+        self.sock2.close()
+
     def test_udp_echo(self):
-
-        addr1 = "127.0.0.1"
-        port1 = 50000
-        sock1 = self.createUDPSocket(addr1, port1)
-
-        addr2 = "127.0.0.1"
-        port2 = 50001
-        sock2 = self.createUDPSocket(addr2, port2)
 
         event = threading.Event()
 
         selectext = SelectExt()
-        selectext.set_reader(sock1, event.set)
-        selectext.set_reader(sock2, lambda: sock2.sendto(*sock2.recvfrom(2048)))
+        selectext.set_reader(self.sock1, event.set)
+        selectext.set_reader(self.sock2, \
+                lambda: self.sock2.sendto(*self.sock2.recvfrom(2048)))
 
         def loop():
             while selectext.wait():
                 pass
 
-        th = threading.Thread(target=loop, name="select loop")
-        th.start()
-
-        msg = "Hello, world"
-        sock1.sendto(msg, (addr2, port2))
-        if event.wait():
-            recv_msg, peer = sock1.recvfrom(2048)
-            self.assertEqual(msg, recv_msg)
-
-        msg = "Good-bye, workd"
-        sock1.sendto(msg, (addr2, port2))
-        if event.wait():
-            event.clear()
-            recv_msg, peer = sock1.recvfrom(2048)
-            self.assertEqual(msg, recv_msg)
-
-        self.assertTrue(th.is_alive())
-
-        selectext.notify()
-
-        th.join()
-
-        self.assertFalse(th.is_alive())
-
-        ## Re-usable test
-
-        th = threading.Thread(target=loop, name="select loop")
-        th.start()
-
-        msg = "Hello, world"
-        sock1.sendto(msg, (addr2, port2))
-        if event.wait():
-            recv_msg, peer = sock1.recvfrom(2048)
-            self.assertEqual(msg, recv_msg)
-
-        msg = "Good-bye, workd"
-        sock1.sendto(msg, (addr2, port2))
-        if event.wait():
-            event.clear()
-            recv_msg, peer = sock1.recvfrom(2048)
-            self.assertEqual(msg, recv_msg)
-
-        self.assertTrue(th.is_alive())
-
-        selectext.notify()
-
-        th.join()
-
-        self.assertFalse(th.is_alive())
+        # Re-use
+        for count in range(0,10):
+            th = threading.Thread(target=loop, name="select loop")
+            th.start()
+    
+            msg = bytes(b"Hello, world")
+            self.sock1.sendto(msg, (self.addr2, self.port2))
+            if event.wait():
+                recv_msg, peer = self.sock1.recvfrom(2048)
+                self.assertEqual(msg, recv_msg)
+    
+            msg = bytes(b"Good-bye, workd")
+            self.sock1.sendto(msg, (self.addr2, self.port2))
+            if event.wait():
+                event.clear()
+                recv_msg, peer = self.sock1.recvfrom(2048)
+                self.assertEqual(msg, recv_msg)
+    
+            self.assertTrue(th.is_alive())
+    
+            selectext.notify()
+    
+            th.join()
+    
+            self.assertFalse(th.is_alive())
 
 
 ########################################################################

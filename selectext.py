@@ -30,6 +30,43 @@ import socket
 import threading
 
 
+
+try:
+    from socket import socketpair
+except ImportError:
+    import errno
+
+    #
+    # Copied From:
+    #   https://gist.github.com/geertj/4325783
+    #
+    def socketpair(
+            sock_family=socket.AF_INET,
+            sock_type=socket.SOCK_STREAM,
+            sock_proto=0):
+        """Emulate the Unix socketpair() function on Windows."""
+
+        # We create a connected TCP socket.
+        # Note the trick with setblocking(0)
+        # that prevents us from having to create a thread.
+
+        lsock = socket.socket(sock_family, sock_type, sock_proto)
+        lsock.bind(('localhost', 0)) 
+        lsock.listen(1)
+        addr, port = lsock.getsockname()
+        csock = socket.socket(sock_family, sock_type, sock_proto)
+        csock.setblocking(0)
+        try:
+            csock.connect((addr, port))
+        except socket.error as e:
+            if e.errno != errno.WSAEWOULDBLOCK:
+                raise
+        ssock, addr = lsock.accept()
+        csock.setblocking(1)
+        lsock.close()
+        return (ssock, csock)
+
+
 class SelectExt(object):
 
     def __init__(self):
@@ -39,7 +76,7 @@ class SelectExt(object):
 
         self.rlock = threading.RLock()
         self.notify_lock = threading.Lock()
-        self.pair = socket.socketpair()
+        self.pair = socketpair()
 
     def __del__(self):
         self.pair[0].shutdown(socket.SHUT_RDWR)
@@ -73,13 +110,13 @@ class SelectExt(object):
 
     def notify(self):
         with self.notify_lock:
-            self.pair[1].send('@')
+            self.pair[1].send(bytes(b'@'))
           
     def wait(self, timeout=0):
 
         with self.rlock:
             ready_to_read, ready_to_write, in_error = select.select(
-                    self.readers.keys() + [ self.pair[0], ],
+                    list(self.readers.keys()) + [ self.pair[0], ],
                     self.writers.keys(),
                     self.error_handlers.keys(),
                     timeout)

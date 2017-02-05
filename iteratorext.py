@@ -25,6 +25,7 @@
 # THE SOFTWARE.
 #
 
+import operator
 import sys
 
 from itertools import chain

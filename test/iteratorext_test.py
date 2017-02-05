@@ -19,10 +19,18 @@ class IteratorExtTest(unittest.TestCase):
         with self.assertRaises(StopIteration):
             next(it)
 
+        it = pairwise([])
+        with self.assertRaises(StopIteration):
+            next(it)
+
     def test_blockby_separator(self):
         it = blockby_separator(lambda x: x == 0, [0,1,0,3,4,0])
         self.assertEqual(next(it), [1])
         self.assertEqual(next(it), [3,4])
+        with self.assertRaises(StopIteration):
+            next(it)
+
+        it = blockby_separator(lambda x: x == 0, [])
         with self.assertRaises(StopIteration):
             next(it)
 
@@ -31,6 +39,10 @@ class IteratorExtTest(unittest.TestCase):
         self.assertEqual(next(it), [0,1])
         self.assertEqual(next(it), [0,3,4])
         self.assertEqual(next(it), [0])
+        with self.assertRaises(StopIteration):
+            next(it)
+
+        it = blockby_header(lambda x: x == 0, [])
         with self.assertRaises(StopIteration):
             next(it)
 

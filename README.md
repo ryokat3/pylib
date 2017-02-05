@@ -1,13 +1,15 @@
 <!-- ----------------------------------------------------------------
 ----------------------------------------------------------------- -->
 
-# pylib -- General Libray of Python Programming
+# PyLib -- General Libray of Python Programming
 
 - **Composer**: Currying and composing functions 
 
 - **Singleton**: Simple Singleton and Parameterized Singleton
 
 - **SelectExt**: A wrapper class for select 
+
+- **IteratorExt**: Some extensions like itertools
 
 
 

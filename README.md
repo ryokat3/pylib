@@ -1,5 +1,14 @@
-<!-- ----------------------------------------------------------------
------------------------------------------------------------------ -->
+<!-- ################################################################
+
+Print out source code
+
+
+import inspect
+from test.singleton_test import *
+
+print(inspect.getsource(eval("SingletonTest.test1")))
+
+################################################################ -->
 
 # PyLib -- General Libray of Python Programming
 

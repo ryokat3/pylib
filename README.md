@@ -38,7 +38,7 @@ _sub_val = composer('sub_val')
 
 # Composing a function to calculate (x + 3) - 10
 func_comp = \
-	composer(operator.add, _0, _add_val) >> \
+        composer(operator.add, _0, _add_val) >> \
         composer(operator.sub, _0, _sub_val)
 
 
@@ -57,29 +57,28 @@ print(func(20))
 
 `SingletonDict` provides a single instance for same parameters.
 
-- Python2
+Python2
 
 ```python
 class Test(object):
     __metaclass__ = SingletonDict
-```python
+```
 
-- Python3
+Python3
 
 ```python
 class Test(object, metaclass=SingletonDict):
     pass
 ```
 
-- Python 2 & 3
+Python 2 & 3
 
 ```python
 class Test(SingletonDict('Test', (object,), {})):
     pass
 ````
 
-
-- Usage
+Usage
 
 ```python
 from singleton import *

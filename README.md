@@ -1,15 +1,14 @@
-<!-- ################################################################
+<!-- vim: set tabstop=4 expandtab shiftwidth=4 softtabstop=4: -->
 
-################################################################ -->
 
-PyLib -- General Libray of Python Programming
-=============================================
+PyLib -- General Libray for Python Programming
+==============================================
 
 - **Composer**: Currying and composing functions 
 
 - **Singleton**: Simple Singleton and Parameterized Singleton
 
-- **SelectExt**: A wrapper class for select for socket programming
+- **SelectExt**: A wrapper class for select in socket programming
 
 - **IteratorExt**: Some extensions like itertools
 
@@ -18,31 +17,16 @@ PyLib -- General Libray of Python Programming
 Motivation
 ----------
 
-A general programming tools, which is useful for any Python programs, like
-itertools, functools etc.
+A useful programming tools for any Python programs.
 
 
 Examples
 --------
 
-### Composer
-
-#### Composing a function without 'def' statement
+### Composing a parameterized function
 
 ```python
-# _0 is a place holder for positional argument
-_0 = composer(0)
-
-# Composing a function to calculate (x + 3) - 10
-func = composer(operator.add, _0, 3) >> composer(operator.sub, _0, 10)
-
-# Print '13' as a result
-print(func(20))
-```
-
-#### Generating functions with parameters
-
-```python
+from composer import *
 
 # _0 :       a place holder for 1st positional argument
 # _add_val : a place holder for keyword argument 'add_val'
@@ -53,14 +37,68 @@ _add_val = composer('add_val')
 _sub_val = composer('sub_val')
 
 # Composing a function to calculate (x + 3) - 10
-func_tmpl = composer(operator.add, _0, _add_val) >> \
+func_comp = \
+	composer(operator.add, _0, _add_val) >> \
         composer(operator.sub, _0, _sub_val)
-func = func_tmpl(add_val=3, sub_val=10)
+
+
+func = func_comp(add_val=3, sub_val=10)
 
 # Print '13' as a result
 print(func(20))
+
+func = func_comp(add_val=13, sub_val=10)
+# Print '23' as a result
+print(func(20))
 ```
 
+
+### A parameterized singleton
+
+`SingletonDict` provides a single instance for same parameters.
+
+- Python2
+
+```python
+class Test(object):
+    __metaclass__ = SingletonDict
+```python
+
+- Python3
+
+```python
+class Test(object, metaclass=SingletonDict):
+    pass
+```
+
+- Python 2 & 3
+
+```python
+class Test(SingletonDict('Test', (object,), {})):
+    pass
+````
+
+
+- Usage
+
+```python
+from singleton import *
+
+class Test(SingletonDict('Test', (object,), {})):
+
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+test1 = Test(1, 2)
+test2 = Test(b=2, a=1)
+
+assert test1 == test2
+
+test1.a = 3
+
+assert test2.a == 3
+```
 
 Installation
 ------------

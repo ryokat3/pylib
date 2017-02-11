@@ -1,50 +1,33 @@
 <!-- ################################################################
 
-Print out source code
-
-import inspect
-from test.singleton_test import *
-
-print(inspect.getsource(eval("SingletonTest.test1")))
-
 ################################################################ -->
 
-<!--#![PYTHON_EXEC]
-import inspect
-import os
-import sys
-
-sys.path.append(os.path.abspath('test'))
-
-from singleton_test import *
--->
-
-<!--#![PYTHON_EVAL] inspect.getsource(SingletonTest.test1) -->
-
-
-# PyLib -- General Libray of Python Programming
+PyLib -- General Libray of Python Programming
+=============================================
 
 - **Composer**: Currying and composing functions 
 
 - **Singleton**: Simple Singleton and Parameterized Singleton
 
-- **SelectExt**: A wrapper class for select 
+- **SelectExt**: A wrapper class for select for socket programming
 
 - **IteratorExt**: Some extensions like itertools
 
 
 
-## Motivation
+Motivation
+----------
 
 A general programming tools, which is useful for any Python programs, like
 itertools, functools etc.
 
 
-## Examples
+Examples
+--------
 
 ### Composer
 
-1. Composing a function without 'def' statement
+#### Composing a function without 'def' statement
 
 ```python
 # _0 is a place holder for positional argument
@@ -57,7 +40,7 @@ func = composer(operator.add, _0, 3) >> composer(operator.sub, _0, 10)
 print(func(20))
 ```
 
-2. Generating functions with parameters
+#### Generating functions with parameters
 
 ```python
 

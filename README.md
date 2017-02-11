@@ -1,4 +1,4 @@
-<!--
+<!-- ################################################################
 
 Print out source code
 
@@ -11,7 +11,12 @@ print(inspect.getsource(eval("SingletonTest.test1")))
 
 <!--#![PYTHON_EXEC]
 import inspect
-from test.singleton_test import *
+import os
+import sys
+
+sys.path.append(os.path.abspath('test'))
+
+from singleton_test import *
 -->
 
 <!--#![PYTHON_EVAL] inspect.getsource(SingletonTest.test1) -->

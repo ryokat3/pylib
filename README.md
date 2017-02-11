@@ -42,14 +42,13 @@ func_comp = \
         composer(operator.sub, _0, _sub_val)
 
 
+# Generating a function :: (x + 3) - 10
 func = func_comp(add_val=3, sub_val=10)
+assert func(20) == 13
 
-# Print '13' as a result
-print(func(20))
-
+# Generating a function :: (x + 13) - 10
 func = func_comp(add_val=13, sub_val=10)
-# Print '23' as a result
-print(func(20))
+assert func(20) == 23
 ```
 
 

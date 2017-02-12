@@ -4,37 +4,70 @@
 import operator
 import os
 import sys
+import tempfile
 import unittest
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from excel import *
+from test_utils import *
 
 
 class ExcelWorkbooksUnitTest(unittest.TestCase):
 
     def test_create(self):
-        filename = 'test1.xlsx'
+        filename = getTestFileName("test_create.xlsx")
 
-        self.assertFalse(os.path.isfile(filename))
         wb = ExcelApplication().Workbooks(filename)
+        wb.Close()
         self.assertTrue(os.path.isfile(filename))
-        del wb
-        os.remove(filename)
-        self.assertFalse(os.path.isfile(filename))
-    
 
-class ExcelWorksheet_UnitTest(unittest.TestCase):
+    def test_open(self):
+        filename = getTestFileName("test_open.xlsx")
 
-    def _UsedRange(self):
-        rng = ExcelApplication().Workbooks('test\\test1.xlsx').Worksheets('test1').UsedRange
-        cell = rng.Cells(1,1)
+        wb = ExcelApplication().Workbooks(filename)
+        wb.Close()
+        self.assertTrue(os.path.isfile(filename))
+
+        wb = ExcelApplication().Workbooks.open(filename)
+        wb.Close()
+        self.assertTrue(os.path.isfile(filename))
+
+
+class ExcelWorksheetsUnitTest(unittest.TestCase):
+
+    def test_create(self):
+        filename = getTestFileName("test_worksheet_create.xlsx")
+
+        wb = ExcelApplication().Workbooks(filename)
+        wsheets = wb.Worksheets
+        self.assertEqual(wsheets.Count, 3)
+
+        ws = wsheets.create('test')
+        self.assertEqual(wsheets.Count, 4)
+
+        wb.Close()
+
+
+class ExcelWorksheetUnitTest(unittest.TestCase):
+
+    def test_UsedRange(self):
+        filename = getTestFileName("test_used_range.xlsx")
+
+        wb = ExcelApplication().Workbooks(filename)
+        ws = wb.Worksheets('test')
+
+        ws.Cells(2,3).text = "hello"
+        self.assertEqual(ws.Cells(2,3).text, "hello")
+
+        ws.Cells(11,22).text = "world"
+
+        rng = ws.UsedRange
+        self.assertEqual(rng.Row, 2)
+        self.assertEqual(rng.Column, 3)
+
+        wb.Close()
+
         
-        self.assertEqual(rng.Row, cell.Row)
-        self.assertEqual(rng.Column, cell.Column)
-        self.assertEqual(rng.Rows.Count, 8)
-        self.assertEqual(rng.Columns.Count, 4)
-        self.assertEqual(cell.Rows.Count, 1)
-        self.assertEqual(cell.Columns.Count, 1)
 
     def _Cells(self):
         ws = ExcelApplication().Workbooks('test\\test1.xlsx').Worksheets('test1')

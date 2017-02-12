@@ -94,8 +94,7 @@ class ComObject(object):
         if self._com is not None:
             Marshal.ReleaseComObject(self._com)
             self._com = None
-        #logging.debug("{0}.__del__".format(self.__class__.__name__))
-        print("{0}.__del__".format(self.__class__.__name__))
+        logging.debug("{0}.__del__".format(self.__class__.__name__))
 
     def find_ancestor(self, cls):
         parent = self
@@ -265,7 +264,6 @@ class ExcelWorkbooks(ComObject):
             self.__class__.__name__, path))
         return None
 
-    
     def __call__(self, path):
         return self.find(path) or self.open(path) or self.create(path)
 
@@ -328,6 +326,10 @@ class ExcelWorkbook(ComObject):
             Missing.Value
         )
 
+    def Close(self, _SaveChanges=True):
+        self._com.Close(_SaveChanges)
+    
+
 ########################################################################
 # Excel Worksheets Delegation
 ########################################################################
@@ -379,6 +381,10 @@ class ExcelWorksheets(ComObject):
     def __call__(self, name):
         return self.find(name) or self.open(name) or self.create(name)
 
+    @property
+    def Count(self):
+        return self._com.Count
+
     
 ########################################################################
 # Excel RangeBase Delegation
@@ -426,12 +432,11 @@ class ExcelRangeBase(WorksheetComObject):
 # Excel Range Delegation
 ########################################################################
 
-class ExcelRange(ExcelRangeBase):
+class ExcelRange(ComObject):
 
     def __init__(self, com, parent):
         super(ExcelRange, self).__init__(com, parent)
         
-
     def __del__(self):
         super(ExcelRange, self).__del__()
 
@@ -518,20 +523,17 @@ class ExcelRange(ExcelRangeBase):
 # Excel Worksheet Delegation
 ########################################################################
 
-class ExcelWorksheet(ExcelRangeBase):
+class ExcelWorksheet(ComObject):
 
     def __init__(self, com, parent):
         super(ExcelWorksheet, self).__init__(com, parent)
         self._rngdic = {}
-        
 
     def __del__(self):
         for key, rng in self._rngdic.iteritems():
             del rng
         self._rngdic = None
-            
         super(ExcelWorksheet, self).__del__()
-
 
     def _add_range(self, rngcom):
         key = (rngcom.Row, rngcom.Column,
@@ -539,25 +541,26 @@ class ExcelWorksheet(ExcelRangeBase):
         self._rngdic[key] = ExcelRange(rngcom, self)
         return self._rngdic[key]
             
-
     def Range(self, cell_tl, cell_br):
-        key = ( cell_tl.Row, cell_tl.Column,
-            cell_br.Row - cell_tl.Row + 1,
-            cell_br.Column - cell_tl.Column + 1)
-        
-        try:
+        key = (
+                cell_tl.Row,
+                cell_tl.Column,
+                cell_br.Row - cell_tl.Row + 1,
+                cell_br.Column - cell_tl.Column + 1
+                )
+        if self._rngdic.has_key(key):
             return self._rngdic[key]
-        except KeyError:
-            pass
+        else:
+            return self._add_range(
+                    self._com.Range(cell_tl._com, cell_br._com))
 
-        return self._add_range(self._com.Range(cell_tl._com, cell_br._com))
-
-
+    def Cells(self, row, column):
+        return self._add_range(ExcelRange(self._com.Cells(row, column), self))
+        
     @property
     def UsedRange(self):
         return self._add_range(self._com.UsedRange)
         
-
     @property
     def Name(self):
         return self._com.Name
@@ -577,7 +580,6 @@ class ExcelWorksheet(ExcelRangeBase):
     @property
     def StandardWidth(self):
         return self._com.StandardWidth
-
 
     
 ########################################################################
@@ -662,13 +664,12 @@ class ExcelCells(WorksheetComObject):
         super(ExcelCells, self).__del__()
 
     def __call__(self, row, col):
-        try:
+        key = (row, col)
+        if self._celldic.has_key(key):
             return self._celldic[(row, col)]
-        except KeyError:
-            pass
-
-        self._celldic[(row, col)] = ExcelRange(self._com(row, col), self)
-        return self._celldic[(row, col)]
+        else:
+            self._celldic[(row, col)] = ExcelRange(self._com(row, col), self)
+            return self._celldic[(row, col)]
 
     
 ########################################################################

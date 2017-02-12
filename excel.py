@@ -549,7 +549,27 @@ class ExcelCell(ExcelRange):
 
 
 ########################################################################
-# Excel Columns Delegation
+# Excel Rows
+########################################################################
+
+class ExcelRows(ExcelRange):
+
+    def __init__(self, com, worksheet):
+        super(ExcelRows, self).__init__(com, worksheet)
+        
+    def __del__(self):
+        super(ExcelRows, self).__del__()
+
+    @property            
+    def Count(self):
+        return self._com.Count
+
+    def Item(self, num):
+        return ExcelRange(self._com.Item(num), self._parent)
+
+    
+########################################################################
+# Excel Columns
 ########################################################################
 
 class ExcelColumns(ExcelRange):
@@ -565,45 +585,7 @@ class ExcelColumns(ExcelRange):
         return self._com.Count
 
     def Item(self, num):
-        try:
-            return self._coldic[num]
-        except KeyError:
-            pass
-
-        self._coldic[num] = ExcelListColumn(self._com.Item(num), self)
-        return self._coldic[num]
-
-    
-########################################################################
-# Excel Rows Delegation
-########################################################################
-
-class ExcelListRows(WorksheetComObject):
-
-    def __init__(self, com, parent):
-        super(ExcelListRows, self).__init__(com, parent)
-        self._rowdic = {}
-        
-
-    def __del__(self):
-        for num, row in self._rowdic.iteritems():
-            del row
-        self._rowdic = {}
-        super(ExcelListRows, self).__del__()
-
-    @property            
-    def Count(self):
-        return self._com.Count
-
-
-    def Item(self, num):
-        try:
-            return self._rowdic[num]
-        except KeyError:
-            pass
-
-        self._rowdic[num] = ExcelListRow(self._com.Item(num), self)
-        return self._rowdic[num]
+        return ExcelRange(self._com.Item(num), self._parent)
 
     
 ########################################################################

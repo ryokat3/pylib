@@ -3,3 +3,5 @@ __pycache__
 .*.swp
 local_dist.sh
 hehe*
+*.xls
+*.xlsx

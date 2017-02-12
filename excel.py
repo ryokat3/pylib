@@ -205,7 +205,6 @@ class ExcelWorkbooks(ComObject):
     def Count(self):
         return self._com.Count
     
-            
     def find(self, path):
         logging.debug("{0} find {1}".format(self.__class__.__name__, path))
 
@@ -228,7 +227,6 @@ class ExcelWorkbooks(ComObject):
 
         return None
     
-
     def open(self, path):
         logging.debug("{0} open {1}".format(self.__class__.__name__, path))
         
@@ -244,7 +242,6 @@ class ExcelWorkbooks(ComObject):
             return wb
         else:
             return None
-
 
     def create(self, path):
         logging.debug("{0} create {1}".format(self.__class__.__name__, path))
@@ -282,14 +279,12 @@ class ExcelWorkbook(ComObject):
         if self.Saved is not True:
             self.Save()
         self._worksheets = ExcelWorksheets(self._com.Worksheets, self)
-        
 
     def __del__(self):
         if self._worksheets != None:
             del self._worksheets
             self._worksheets = None
         super(ExcelWorkbook, self).__del__()
-
         
     @property
     def Worksheets(self):
@@ -387,55 +382,81 @@ class ExcelWorksheets(ComObject):
 
     
 ########################################################################
-# Excel RangeBase Delegation
+# Excel Worksheet Delegation
 ########################################################################
 
-class ExcelRangeBase(WorksheetComObject):
+class ExcelWorksheet(ComObject):
 
     def __init__(self, com, parent):
-        super(ExcelRangeBase, self).__init__(com, parent)
-
-        self._cells = ExcelCells(self._com.Cells, self)
-        self._rows = ExcelRange(self._com.Rows, self)
-        self._columns = ExcelRange(self._com.Columns, self)
-        
+        super(ExcelWorksheet, self).__init__(com, parent)
+        self._rangedic = {}
 
     def __del__(self):
-        if self._columns != None:
-            del self._columns
-            self._columns = None
+        for key, rng in self._rangedic.iteritems():
+            del rng
+        self._rangedic = None
+
+        super(ExcelWorksheet, self).__del__()
+
+    def _add_range(self, rngcom):
+        key = (rngcom.Row, rngcom.Column,
+            rngcom.Rows.Count, rngcom.Columns.Count)
+        if rngcom.Rows.Count == 1 and rngcom.Columns.Count == 1:
+            self._rangedic[key] = ExcelCell(rngcom, self)
+        else:
+            self._rangedic[key] = ExcelRange(rngcom, self)
+        return self._rangedic[key]
             
-        if self._rows != None:
-            del self._rows
-            self._rows = None
-            
-        if self._cells != None:
-            del self._cells
-            self._cells = None
+    def Range(self, cell_tl, cell_br):
+        key = (
+                cell_tl.Row,
+                cell_tl.Column,
+                cell_br.Row - cell_tl.Row + 1,
+                cell_br.Column - cell_tl.Column + 1
+                )
+        if self._rangedic.has_key(key):
+            return self._rangedic[key]
+        else:
+            return self._add_range(
+                    self._com.Range(cell_tl._com, cell_br._com))
 
-        super(ExcelRangeBase, self).__del__()
-            
+    def Cells(self, row, column):
+        return self._add_range(
+                ExcelCell(self._com.Cells(row, column), self))
+        
     @property
-    def Columns(self):
-        return self._columns
+    def UsedRange(self):
+        return self._add_range(self._com.UsedRange)
+        
+    @property
+    def Name(self):
+        return self._com.Name
+    
+    @Name.setter
+    def Name(self, name):
+        self._com.Name = name
+        
+    @property
+    def Index(self):
+        return self._com.Index
 
     @property
-    def Rows(self):
-        return self._rows
-
+    def StandardHeight(self):
+        return self._com.StandardHeight
+        
     @property
-    def Cells(self):
-        return self._cells
+    def StandardWidth(self):
+        return self._com.StandardWidth
 
-
+    
 ########################################################################
 # Excel Range Delegation
 ########################################################################
 
 class ExcelRange(ComObject):
 
-    def __init__(self, com, parent):
-        super(ExcelRange, self).__init__(com, parent)
+    def __init__(self, com, worksheet):
+        super(ExcelRange, self).__init__(com, worksheet)
         
     def __del__(self):
         super(ExcelRange, self).__del__()
@@ -500,7 +521,15 @@ class ExcelRange(ComObject):
     def MergeCells(self):
         return self._com.MergeCells
 
-    # For convenience
+
+class ExcelCell(ExcelRange):
+
+    def __init__(self, com, worksheet):
+        super(ExcelCell, self).__init__(com, worksheet)
+        
+    def __del__(self):
+        super(ExcelCell, self).__del__()
+
     @property
     def value(self):
         return self.Value[XlRangeValueDataType.xlRangeValueDefault]
@@ -520,89 +549,20 @@ class ExcelRange(ComObject):
 
 
 ########################################################################
-# Excel Worksheet Delegation
-########################################################################
-
-class ExcelWorksheet(ComObject):
-
-    def __init__(self, com, parent):
-        super(ExcelWorksheet, self).__init__(com, parent)
-        self._rngdic = {}
-
-    def __del__(self):
-        for key, rng in self._rngdic.iteritems():
-            del rng
-        self._rngdic = None
-        super(ExcelWorksheet, self).__del__()
-
-    def _add_range(self, rngcom):
-        key = (rngcom.Row, rngcom.Column,
-            rngcom.Rows.Count, rngcom.Columns.Count)
-        self._rngdic[key] = ExcelRange(rngcom, self)
-        return self._rngdic[key]
-            
-    def Range(self, cell_tl, cell_br):
-        key = (
-                cell_tl.Row,
-                cell_tl.Column,
-                cell_br.Row - cell_tl.Row + 1,
-                cell_br.Column - cell_tl.Column + 1
-                )
-        if self._rngdic.has_key(key):
-            return self._rngdic[key]
-        else:
-            return self._add_range(
-                    self._com.Range(cell_tl._com, cell_br._com))
-
-    def Cells(self, row, column):
-        return self._add_range(ExcelRange(self._com.Cells(row, column), self))
-        
-    @property
-    def UsedRange(self):
-        return self._add_range(self._com.UsedRange)
-        
-    @property
-    def Name(self):
-        return self._com.Name
-    
-    @Name.setter
-    def Name(self, name):
-        self._com.Name = name
-        
-    @property
-    def Index(self):
-        return self._com.Index
-
-    @property
-    def StandardHeight(self):
-        return self._com.StandardHeight
-        
-    @property
-    def StandardWidth(self):
-        return self._com.StandardWidth
-
-    
-########################################################################
 # Excel Columns Delegation
 ########################################################################
 
-class ExcelListColumns(WorksheetComObject):
+class ExcelColumns(ExcelRange):
 
-    def __init__(self, com, parent):
-        super(ExcelListColumns, self).__init__(com, parent)
-        self._coldic = {}
+    def __init__(self, com, worksheet):
+        super(ExcelColumns, self).__init__(com, worksheet)
         
-
     def __del__(self):
-        for num, col in self._coldic.iteritems():
-            del col
-        self._coldic = {}
-        super(ExcelListColumns, self).__del__()
+        super(ExcelColumns, self).__del__()
 
     @property            
     def Count(self):
         return self._com.Count
-
 
     def Item(self, num):
         try:
@@ -644,32 +604,6 @@ class ExcelListRows(WorksheetComObject):
 
         self._rowdic[num] = ExcelListRow(self._com.Item(num), self)
         return self._rowdic[num]
-
-    
-########################################################################
-# Excel Cells Delegation
-########################################################################
-
-class ExcelCells(WorksheetComObject):
-
-    def __init__(self, com, parent):
-        super(ExcelCells, self).__init__(com, parent)
-        self._celldic = {}
-        
-
-    def __del__(self):
-        for num, cell in self._celldic.iteritems():
-            del cell
-        self._celldic = {}
-        super(ExcelCells, self).__del__()
-
-    def __call__(self, row, col):
-        key = (row, col)
-        if self._celldic.has_key(key):
-            return self._celldic[(row, col)]
-        else:
-            self._celldic[(row, col)] = ExcelRange(self._com(row, col), self)
-            return self._celldic[(row, col)]
 
     
 ########################################################################

@@ -65,9 +65,11 @@ class ExcelWorksheetUnitTest(unittest.TestCase):
         self.assertEqual(rng.Row, 2)
         self.assertEqual(rng.Column, 3)
 
+        print("Rows: ", rng.Rows.Count)
+        print("Columns: ", rng.Columns.Count)
+
         wb.Close()
 
-        
 
     def _Cells(self):
         ws = ExcelApplication().Workbooks('test\\test1.xlsx').Worksheets('test1')

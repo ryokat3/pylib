@@ -32,6 +32,27 @@ class ExcelWorkbooksUnitTest(unittest.TestCase):
         wb.Close()
         self.assertTrue(os.path.isfile(filename))
 
+    def test_multi_open(self):
+        filename1 = getTestFileName("test_multi1.xlsx")
+        filename2 = getTestFileName("test_multi2.xlsx")
+        filename3 = getTestFileName("test_multi3.xlsx")
+        filename4 = getTestFileName("test_multi4.xlsx")
+
+        wb1 = ExcelApplication().Workbooks(filename1)
+        wb2 = ExcelApplication().Workbooks(filename2)
+        wb3 = ExcelApplication().Workbooks(filename3)
+        wb4 = ExcelApplication().Workbooks(filename4)
+
+        wb1.Close()
+        wb2.Close()
+        wb3.Close()
+        wb4.Close()
+
+        self.assertTrue(os.path.isfile(filename1))
+        self.assertTrue(os.path.isfile(filename2))
+        self.assertTrue(os.path.isfile(filename3))
+        self.assertTrue(os.path.isfile(filename4))
+
 
 class ExcelWorksheetsUnitTest(unittest.TestCase):
 

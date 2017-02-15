@@ -1,6 +1,7 @@
 __pycache__
 *.pyc
 .*.swp
+.*.py.*
 local_dist.sh
 hehe*
 *.xls

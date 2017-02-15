@@ -69,6 +69,26 @@ class ExcelWorksheetsUnitTest(unittest.TestCase):
         wb.Close()
 
 
+    def test_multi_create(self):
+        filename = getTestFileName("test_worksheet_create.xlsx")
+
+        wb = ExcelApplication().Workbooks(filename)
+        wsheets = wb.Worksheets
+        self.assertEqual(wsheets.Count, 3)
+
+        ws = wsheets.create('test')
+        self.assertEqual(wsheets.Count, 4)
+
+        wb = ExcelApplication().Workbooks(filename)
+        wsheets = wb.Worksheets
+        self.assertEqual(wsheets.Count, 4)
+
+        ws = wsheets.create('test1')
+        self.assertEqual(wsheets.Count, 5)
+
+        wb.Close()
+
+
 class ExcelWorksheetUnitTest(unittest.TestCase):
 
     def test_UsedRange(self):

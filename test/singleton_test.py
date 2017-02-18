@@ -100,7 +100,6 @@ class SingletonCleanupTest(unittest.TestCase):
     def test_singleton(self):
 
         class Test(SingletonCleanup('Test', (object,), {})):
-
             def __init__(self, val):
                 self.val = val
 
@@ -110,6 +109,57 @@ class SingletonCleanupTest(unittest.TestCase):
         self.assertEqual(inst1.val, 1)
         self.assertEqual(inst2.val, 1)
         self.assertEqual(inst1, inst2)
+
+    def test_abcmeta(self):
+
+        class Test(SingletonCleanup('Test', (object,), {})):
+
+            def __init__(self, val):
+                self.val = val
+
+            @abc.abstractmethod
+            def cleanup(self):
+                pass
+
+
+        class DontInit(Test):
+            pass
+
+        with self.assertRaises(TypeError):
+            obj = DontInit()
+
+    def test_cleanup(self):
+
+        is_clean = False
+        
+        class Test(Cleanup):
+            
+            def __init__(self, val):
+                self.val = val
+                
+            def cleanup(self):
+                is_clean = True
+                
+        a = Test(3)
+        b = Test(4)
+
+        self.assertEqual(a.val, 3)
+        self.assertEqual(b.val, 3)
+
+        a = None
+        del b
+
+        self.assertFalse(is_clean)
+        c = Test(5)
+
+        self.assertEqual(c.val, 3)
+
+        c = None
+        Test._instance = None
+
+        self.assertTrue(is_clean)
+
+        
 
 ########################################################################
 # main

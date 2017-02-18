@@ -76,18 +76,25 @@ class SingletonCleanup(abc.ABCMeta):
     def __new__(cls, name, bases, dic):
         dic['_instance'] = None
         dic['_instance_lock'] = threading.Lock()
-        dic['_counter'] = 0
 
         return abc.ABCMeta.__new__(cls, name, bases, dic)
 
     def __call__(self, *args, **kwargs):
-        super(SingletonCleanup, self).__call__(*args, **kwargs)
-
         with self._instance_lock:
             if self._instance == None:
+                super(SingletonCleanup, self).__call__(*args, **kwargs)
                 self._instance = type.__call__(self, *args, **kwargs)
-                self._counter += 1
         return self._instance
+
+
+class Cleanup(SingletonCleanup('Cleanup', (object,), {})):
+
+    def __del__(self):
+        self.cleanup()
+
+    @abc.abstractmethod
+    def cleanup(self):
+        pass
 
 ########################################################################
 # main

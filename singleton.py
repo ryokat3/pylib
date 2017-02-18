@@ -71,15 +71,18 @@ class SingletonDict(type):
         return self._instance_dict[key]
 
 
-class SingletonRefCounter(type):
+class SingletonCleanup(abc.ABCMeta):
 
     def __new__(cls, name, bases, dic):
         dic['_instance'] = None
         dic['_instance_lock'] = threading.Lock()
         dic['_counter'] = 0
-        return type.__new__(cls, name, bases, dic)
+
+        return abc.ABCMeta.__new__(cls, name, bases, dic)
 
     def __call__(self, *args, **kwargs):
+        super(SingletonCleanup, self).__call__(*args, **kwargs)
+
         with self._instance_lock:
             if self._instance == None:
                 self._instance = type.__call__(self, *args, **kwargs)

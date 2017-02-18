@@ -95,6 +95,22 @@ class SingletonDictTest(unittest.TestCase):
         self.assertNotEqual(i1, i3)
 
 
+class SingletonCleanupTest(unittest.TestCase):
+
+    def test_singleton(self):
+
+        class Test(SingletonCleanup('Test', (object,), {})):
+
+            def __init__(self, val):
+                self.val = val
+
+        inst1 = Test(1)
+        inst2 = Test(2)
+
+        self.assertEqual(inst1.val, 1)
+        self.assertEqual(inst2.val, 1)
+        self.assertEqual(inst1, inst2)
+
 ########################################################################
 # main
 ########################################################################

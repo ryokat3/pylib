@@ -12,6 +12,31 @@ from excel import *
 from test_utils import *
 
 
+class RangeNameUnitTest(unittest.TestCase):
+
+    def test_digiseq(self):
+        self.assertEqual(digiseq(0,26), (0,))
+        self.assertEqual(digiseq(1,26), (1,))
+        self.assertEqual(digiseq(26,26), (1,0))
+
+    def test_colname(self):
+        self.assertEqual(colname(1), ("A"))
+        self.assertEqual(colname(26), ("Z"))
+        self.assertEqual(colname(27), ("AA"))
+
+    def test_colval(self):
+        self.assertEqual(colval("A"), (1))
+        self.assertEqual(colval("Z"), (26))
+        self.assertEqual(colval("AA"), (27))
+
+    def test_colvalname(self):
+        self.assertEqual(colname(colval("ABCDEFGHIJK")), "ABCDEFGHIJK")
+        self.assertEqual(colval(colname(1234567890)), 1234567890)
+
+    def test_cellname(self):
+        self.assertEqual(cellname(1,1), "A1")
+        self.assertEqual(cellname(1,27), "AA1")
+
 class ExcelWorkbooksUnitTest(unittest.TestCase):
 
     def test_create(self):
@@ -28,7 +53,7 @@ class ExcelWorkbooksUnitTest(unittest.TestCase):
         wb.Close()
         self.assertTrue(os.path.isfile(filename))
 
-        wb = ExcelApplication().Workbooks.open(filename)
+        wb = ExcelApplication().Workbooks(filename)
         wb.Close()
         self.assertTrue(os.path.isfile(filename))
 

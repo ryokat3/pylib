@@ -25,6 +25,7 @@
 # THE SOFTWARE.
 #
 
+import abc
 import inspect
 import threading
 
@@ -36,7 +37,6 @@ class Singleton(type):
         return type.__new__(cls, name, bases, dic)
 
     def __call__(self, *args, **kwargs):
-        
         with self._instance_lock:
             if self._instance == None:
                 self._instance = type.__call__(self, *args, **kwargs)
@@ -69,6 +69,22 @@ class SingletonDict(type):
                 self._instance_dict[key] = \
                         type.__call__(self, *args, **kwargs)
         return self._instance_dict[key]
+
+
+class SingletonRefCounter(type):
+
+    def __new__(cls, name, bases, dic):
+        dic['_instance'] = None
+        dic['_instance_lock'] = threading.Lock()
+        dic['_counter'] = 0
+        return type.__new__(cls, name, bases, dic)
+
+    def __call__(self, *args, **kwargs):
+        with self._instance_lock:
+            if self._instance == None:
+                self._instance = type.__call__(self, *args, **kwargs)
+                self._counter += 1
+        return self._instance
 
 ########################################################################
 # main

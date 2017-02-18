@@ -39,11 +39,14 @@ import os
 import re
 import shutil
 import sys
+import traceback
 
 from itertools import chain
 from itertools import ifilter
 from itertools import imap
 from itertools import izip
+
+from singleton import *
 
 ########################################################################
 # Common
@@ -72,9 +75,34 @@ def atexit_register(func, text=None):
             func()
         except Exception:
             if text != None:
-                logging.info("{0}: {1}".format(funcname(), text))
+                logging.info("{0}".format(text))
             traceback.print_exc()
     return atexit.register(lambda: _(func))
+
+
+########################################################################
+# Excel Cell Name
+########################################################################
+
+def digiseq(val, base):
+    return ((val % base),) if val < base else \
+            digiseq(val // base, base) + digiseq(val % base, base)
+
+
+def colname(val):
+    def _add1(seq):
+        return seq[0:-1] + (seq[-1] + 1,)
+    return ''.join(map(lambda d: chr(ord('A') + d - 1),
+            _add1(digiseq(val - 1, 26))))
+
+
+def colval(name):
+    return reduce(lambda val, ch: val*26 + ord(ch) - ord('A') + 1,
+            name.upper(), 0)
+
+
+def cellname(row, col):
+    return colname(col) + str(row)
 
 
 ########################################################################
@@ -92,7 +120,7 @@ class ComObject(object):
     def __del__(self):
         self._parent = None
         if self._com is not None:
-            Marshal.ReleaseComObject(self._com)
+            Marshal.FinalReleaseComObject(self._com)
             self._com = None
         logging.debug("{0}.__del__".format(self.__class__.__name__))
 
@@ -126,6 +154,8 @@ class WorksheetComObject(ComObject):
 
 class ExcelApplication(ComObject):
 
+    __metaclass__ = Singleton
+
     @staticmethod
     def start(visible=True):
         logging.debug("Start Excel process")
@@ -134,7 +164,7 @@ class ExcelApplication(ComObject):
         com.Visible = MsoTriState.msoTrue if visible else MsoTriState.msoFalse
         com.DisplayAlerts = False
 
-        atexit_register(com.Quit, "End Excel process")
+        #atexit_register(com.Quit, "End Excel process")
         return com
 
 
@@ -190,15 +220,17 @@ class ExcelApplication(ComObject):
 
 class ExcelWorkbooks(ComObject):
 
+    __metaclass__ = Singleton
+
     def __init__(self, com, parent):
         super(ExcelWorkbooks, self).__init__(com, parent)
-        self._wblist = []
+        self._wbdic = {}
         
 
     def __del__(self):
-        for wb in self._wblist:
+        for wb in self._wbdic.values():
             del wb
-            self._wblist = []
+            self._wbdic = {}
         super(ExcelWorkbooks, self).__del__()
 
     @property
@@ -208,51 +240,31 @@ class ExcelWorkbooks(ComObject):
     def find(self, path):
         logging.debug("{0} find {1}".format(self.__class__.__name__, path))
 
-        fullname = FullName(path)
-
-        try:
-            return next(wb for wb in self._wblist if wb.FullName == fullname)
-        except StopIteration:
-            pass
-        
-        try:
-            wb = ExcelWorkbook(next(
-                wbcom for wbcom in self._com
-                if wbcom.FullName == fullname), self)
-            self._wblist.append(wb)
-            
-            return wb
-        except StopIteration:
-            return None
-
-        return None
+        return self._wbdic[path] if path in self._wbdic else None
     
     def open(self, path):
         logging.debug("{0} open {1}".format(self.__class__.__name__, path))
         
-        fullname = FullName(path)        
         try:
-            wbcom = self._com.Open(fullname)
+            wbcom = self._com.Open(path)
         except COMException:
             return None
 
         if wbcom != None:
             wb = ExcelWorkbook(wbcom, self)
-            self._wblist.append(wb)
+            self._wbdic[path] = wb
             return wb
         else:
             return None
 
     def create(self, path):
         logging.debug("{0} create {1}".format(self.__class__.__name__, path))
-
-        fullname = FullName(path)        
         wbcom = self._com.Add(Missing.Value)
         if wbcom != None:
             wb = ExcelWorkbook(wbcom, self)
             try:
-                wb.SaveAs(fullname)
-                self._wblist.append(wb)
+                wb.SaveAs(path)
+                self._wbdic[path] = wb
             except System.Runtime.InteropServices.COMException:
                 logging.error("Failed to save as {0}", path)
             return wb
@@ -262,7 +274,10 @@ class ExcelWorkbooks(ComObject):
         return None
 
     def __call__(self, path):
-        return self.find(path) or self.open(path) or self.create(path)
+        fullname = FullName(path)        
+        return self.find(fullname) or \
+                self.open(fullname) or \
+                self.create(fullname)
 
     
 
@@ -422,7 +437,7 @@ class ExcelWorksheet(ComObject):
 
     def Cells(self, row, column):
         return self._add_range(
-                ExcelCell(self._com.Cells(row, column), self))
+                ExcelCell(self._com.Range(cellname(row, column)), self))
         
     @property
     def UsedRange(self):
@@ -545,7 +560,6 @@ class ExcelCell(ExcelRange):
     @text.setter
     def text(self, value):
         self.value = value
-
 
 
 ########################################################################

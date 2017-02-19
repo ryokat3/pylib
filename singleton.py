@@ -71,26 +71,31 @@ class SingletonDict(type):
         return self._instance_dict[key]
 
 
-class SingletonCleanup(abc.ABCMeta):
+class ABCSingleton(abc.ABCMeta):
 
     def __new__(cls, name, bases, dic):
         dic['_instance'] = None
-        dic['_instance_lock'] = threading.Lock()
+        dic['_instance_rlock'] = threading.RLock()
+        dic['_count'] = 0
 
         return abc.ABCMeta.__new__(cls, name, bases, dic)
 
     def __call__(self, *args, **kwargs):
-        with self._instance_lock:
+        with self._instance_rlock:
             if self._instance == None:
-                super(SingletonCleanup, self).__call__(*args, **kwargs)
+                super(ABCSingleton, self).__call__(*args, **kwargs)
                 self._instance = type.__call__(self, *args, **kwargs)
+                self._count += 1
         return self._instance
 
 
-class Cleanup(SingletonCleanup('Cleanup', (object,), {})):
+class SingletonCleanup(ABCSingleton('SingletonCleanup', (object,), {})):
 
     def __del__(self):
-        self.cleanup()
+        with self._instance_rlock:
+            self._count -= 1
+            if self._count == 0:
+                self.cleanup()
 
     @abc.abstractmethod
     def cleanup(self):

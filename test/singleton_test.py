@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 #
 
+import gc
 import operator
 import unittest
 
@@ -99,7 +100,7 @@ class SingletonCleanupTest(unittest.TestCase):
 
     def test_singleton(self):
 
-        class Test(SingletonCleanup('Test', (object,), {})):
+        class Test(ABCSingleton('Test', (object,), {})):
             def __init__(self, val):
                 self.val = val
 
@@ -112,7 +113,7 @@ class SingletonCleanupTest(unittest.TestCase):
 
     def test_abcmeta(self):
 
-        class Test(SingletonCleanup('Test', (object,), {})):
+        class Test(ABCSingleton('Test', (object,), {})):
 
             def __init__(self, val):
                 self.val = val
@@ -130,18 +131,23 @@ class SingletonCleanupTest(unittest.TestCase):
 
     def test_cleanup(self):
 
-        is_clean = False
+        class Value(object):
+            def __init__(self, val):
+                self.val = val
+
+        obj = Value(False)
         
-        class Test(Cleanup):
+        class Test(SingletonCleanup):
             
             def __init__(self, val):
                 self.val = val
                 
             def cleanup(self):
-                is_clean = True
+                obj.val = True
                 
         a = Test(3)
         b = Test(4)
+
 
         self.assertEqual(a.val, 3)
         self.assertEqual(b.val, 3)
@@ -149,15 +155,20 @@ class SingletonCleanupTest(unittest.TestCase):
         a = None
         del b
 
-        self.assertFalse(is_clean)
+        self.assertFalse(obj.val)
         c = Test(5)
 
         self.assertEqual(c.val, 3)
 
         c = None
+        self.assertFalse(obj.val)
+
         Test._instance = None
 
-        self.assertTrue(is_clean)
+        gc.enable()
+        gc.collect()
+
+        self.assertTrue(obj.val)
 
         
 

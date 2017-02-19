@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+#
+
+#
+# Copied from:
+#   http://code.activestate.com/recipes/496741-object-proxying/
+#
+
 class Proxy(object):
     __slots__ = ["_obj", "__weakref__"]
     def __init__(self, obj):

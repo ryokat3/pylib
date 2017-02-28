@@ -104,6 +104,8 @@ class ExcelWorksheetsUnitTest(unittest.TestCase):
         ws = wsheets.create('test')
         self.assertEqual(wsheets.Count, 4)
 
+        wb.Save()
+
         wb = ExcelApplication().Workbooks(filename)
         wsheets = wb.Worksheets
         self.assertEqual(wsheets.Count, 4)

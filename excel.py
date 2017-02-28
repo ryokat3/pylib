@@ -46,8 +46,6 @@ from itertools import ifilter
 from itertools import imap
 from itertools import izip
 
-from singleton import *
-
 ########################################################################
 # Common
 ########################################################################
@@ -154,8 +152,6 @@ class WorksheetComObject(ComObject):
 
 class ExcelApplication(ComObject):
 
-    __metaclass__ = Singleton
-
     @staticmethod
     def start(visible=True):
         logging.debug("Start Excel process")
@@ -219,8 +215,6 @@ class ExcelApplication(ComObject):
 ########################################################################
 
 class ExcelWorkbooks(ComObject):
-
-    __metaclass__ = Singleton
 
     def __init__(self, com, parent):
         super(ExcelWorkbooks, self).__init__(com, parent)

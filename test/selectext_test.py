@@ -158,31 +158,59 @@ class TimeoutTest(unittest.TestCase):
 
     def test_timeout(self):
 
-        event = threading.Event()
+        event1 = threading.Event()
+        event2 = threading.Event()
+        event3 = threading.Event()
+        event4 = threading.Event()
 
         # Server only receive
         #
         selectext = SelectExt()
+        now = time.time()
+        idx1 = selectext.set_timeout_handler(0.5, event1.set)
+        idx2 = selectext.set_timeout_handler(0.6, event2.set)
+        idx3 = selectext.set_timeout_handler(0.7, event3.set)
+        idx4 = selectext.set_timeout_handler(0.8, event4.set)
 
-        now1 = time.time()
-        idx = selectext.set_timeout_handler(0.5, event.set)
+        selectext.set_reader(self.csock, lambda:0)
         selectext.set_reader(self.ssock, \
-                lambda: self.ssock.recvfrom(2048))
+                lambda: self.ssock.sendto(*self.ssock.recvfrom(2048)))
+
+        msg = bytes(b"Hello, world")
 
         def loop():
+            self.csock.sendto(msg, self.ssock.getsockname())
             while selectext.wait():
-                pass
+                self.csock.sendto(msg, self.ssock.getsockname())
 
         th = threading.Thread(target=loop, name="select loop")
         th.start()
 
-        msg = bytes(b"Hello, world")
+        checked = False
+        if event1.wait():
+            event1.clear()
+            self.assertTrue(abs(time.time() - now - 0.5) < 0.1)
+            checked = True
 
-        self.csock.sendto(msg, self.ssock.getsockname())
-        if event.wait():
-            event.clear()
-            elapse = time.time() - now1
-            self.assertTrue(0.45 < elapse and elapse < 0.55)
+        self.assertTrue(checked)
+        checked = False
+
+        if event2.wait():
+            event2.clear()
+            self.assertTrue(abs(time.time() - now - 0.6) < 0.1)
+            checked = True
+
+        self.assertTrue(checked)
+        checked = False
+
+        selectext.unset_timeout_handler(idx3)
+
+        if event4.wait():
+            event4.clear()
+            self.assertTrue(abs(time.time() - now - 0.8) < 0.1)
+            checked = True
+
+        self.assertTrue(checked)
 
         selectext.notify()
         th.join()

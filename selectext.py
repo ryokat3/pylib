@@ -97,7 +97,7 @@ class SelectExt(object):
 
     def set_timeout_handler(self, timeout, callback):
         with self.rlock:
-            idx = hash(object())
+            idx = object()
             self.timeout_handlers[idx] = (time.time() + timeout, callback)
 
             self.cont = True
@@ -141,8 +141,8 @@ class SelectExt(object):
             if self.timeout_handlers:
 
                 now = time.time()
-                timeout = min([ expire for expire, callback in \
-                    self.timeout_handlers.values() ] + [now]) - now
+                timeout = max(min([ expire for expire, callback in \
+                    self.timeout_handlers.values() ] + [now]) - now, 0)
 
                 ready_to_read, ready_to_write, in_error = select.select(
                     list(self.readers.keys()) + [ self.pair[0], ],

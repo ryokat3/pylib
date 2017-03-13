@@ -4,7 +4,7 @@
 PyLib -- General Libray for Python Programming
 ==============================================
 
-- **Composer**: Currying and composing functions 
+- **Composer**: Currying and composing functions
 
 - **Singleton**: Simple Singleton and Parameterized Singleton
 
@@ -75,7 +75,7 @@ Python 2 & 3
 ```python
 class Test(SingletonDict('Test', (object,), {})):
     pass
-````
+```
 
 Usage
 
@@ -101,7 +101,7 @@ assert test2.a == 3
 Installation
 ------------
 
-Just copy a single file of what you need. 
+Just copy a single file of what you need.
 
 
 License

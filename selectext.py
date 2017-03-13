@@ -100,8 +100,6 @@ class SelectExt(object):
             idx = hash(object())
             self.timeout_handlers[idx] = (time.time() + timeout, callback)
 
-            print(self.timeout_handlers[idx])
-
             self.cont = True
             self.pair[1].send(bytes(b'@'))
 
@@ -144,7 +142,7 @@ class SelectExt(object):
 
                 now = time.time()
                 timeout = min([ expire for expire, callback in \
-                    self.timeout_handlers.values() ], default=now) - now
+                    self.timeout_handlers.values() ] + [now]) - now
 
                 ready_to_read, ready_to_write, in_error = select.select(
                     list(self.readers.keys()) + [ self.pair[0], ],

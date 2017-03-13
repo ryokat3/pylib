@@ -9,8 +9,10 @@ import unittest
 
 import os
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from selectext import *
+
 
 
 class UDPEchoServerTest(unittest.TestCase):
@@ -134,6 +136,56 @@ class TCPEchoServerTest(unittest.TestCase):
             th.join()
     
             self.assertFalse(th.is_alive())
+
+
+class TimeoutTest(unittest.TestCase):
+
+    def createUDPSocket(self, addr, port):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind((addr, port))
+
+        return sock
+
+    def setUp(self):
+        self.ssock = self.createUDPSocket("127.0.0.1", 0)
+        self.csock = self.createUDPSocket("127.0.0.1", 0)
+
+    def tearDown(self):
+        self.ssock.close()
+        self.csock.close()
+
+
+    def test_timeout(self):
+
+        event = threading.Event()
+
+        # Server only receive
+        #
+        selectext = SelectExt()
+
+        now1 = time.time()
+        idx = selectext.set_timeout_handler(0.5, event.set)
+        selectext.set_reader(self.ssock, \
+                lambda: self.ssock.recvfrom(2048))
+
+        def loop():
+            while selectext.wait():
+                pass
+
+        th = threading.Thread(target=loop, name="select loop")
+        th.start()
+
+        msg = bytes(b"Hello, world")
+
+        self.csock.sendto(msg, self.ssock.getsockname())
+        if event.wait():
+            event.clear()
+            elapse = time.time() - now1
+            self.assertTrue(0.45 < elapse and elapse < 0.55)
+
+        selectext.notify()
+        th.join()
 
 
 ########################################################################

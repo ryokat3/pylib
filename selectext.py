@@ -27,6 +27,8 @@
 
 import select
 import socket
+import sys
+import time
 import threading
 
 
@@ -71,11 +73,13 @@ class SelectExt(object):
     def __init__(self):
         self.readers = {}
         self.writers = {}
+        self.timeout_handlers = {}
         self.error_handlers = {}
 
         self.rlock = threading.RLock()
         self.notify_lock = threading.Lock()
         self.pair = socketpair()
+        self.cont = True
 
     def __del__(self):
         self.pair[0].shutdown(socket.SHUT_RDWR)
@@ -91,6 +95,18 @@ class SelectExt(object):
         with self.rlock:
             self.writers[sock] = callback
 
+    def set_timeout_handler(self, timeout, callback):
+        with self.rlock:
+            idx = hash(object())
+            self.timeout_handlers[idx] = (time.time() + timeout, callback)
+
+            print(self.timeout_handlers[idx])
+
+            self.cont = True
+            self.pair[1].send(bytes(b'@'))
+
+            return idx
+
     def set_error_handler(self, sock, callback):
         with self.rlock:
             self.error_handlers[sock] = callback
@@ -103,22 +119,43 @@ class SelectExt(object):
         with self.rlock:
             del self.writers[sock]
 
+    def unset_timeout_handler(self, idx):
+        with self.rlock:
+            del self.timeout_handlers[idx]
+
+            self.cont = True
+            self.pair[1].send(bytes(b'@'))
+
+
     def unset_error_handler(self, sock):
         with self.rlock:
             del self.error_handlers[sock]
 
     def notify(self):
         with self.notify_lock:
+            self.cont = False
             self.pair[1].send(bytes(b'@'))
           
-    def wait(self, timeout=0):
+    def wait(self):
 
         with self.rlock:
-            ready_to_read, ready_to_write, in_error = select.select(
+
+            if self.timeout_handlers:
+
+                now = time.time()
+                timeout = min([ expire for expire, callback in \
+                    self.timeout_handlers.values() ], default=now) - now
+
+                ready_to_read, ready_to_write, in_error = select.select(
                     list(self.readers.keys()) + [ self.pair[0], ],
                     self.writers.keys(),
                     self.error_handlers.keys(),
                     timeout)
+            else:
+                ready_to_read, ready_to_write, in_error = select.select(
+                    list(self.readers.keys()) + [ self.pair[0], ],
+                    self.writers.keys(),
+                    self.error_handlers.keys())
     
             for sock in ready_to_read:
                 if sock != self.pair[0]:
@@ -128,10 +165,16 @@ class SelectExt(object):
             for sock in in_error:
                 self.error_handlers[sock]()
 
+            now = time.time()
+            for idx in [ idx for idx in self.timeout_handlers.keys() \
+                    if now > self.timeout_handlers[idx][0] ]:
+                self.timeout_handlers[idx][1]()
+                del self.timeout_handlers[idx]
+
             if self.pair[0] in ready_to_read:
                 # TODO: any better way to clear the socket completely ?
                 self.pair[0].recv(4096)
-                return False
+                return self.cont
             else:
                 return True
 

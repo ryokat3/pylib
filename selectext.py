@@ -95,7 +95,7 @@ class SelectExt(object):
         with self.rlock:
             self.writers[sock] = callback
 
-    def set_timeout_handler(self, timeout, callback):
+    def set_timer(self, timeout, callback):
         with self.rlock:
             idx = object()
             self.timeout_handlers[idx] = (time.time() + timeout, callback)
@@ -117,13 +117,12 @@ class SelectExt(object):
         with self.rlock:
             del self.writers[sock]
 
-    def unset_timeout_handler(self, idx):
+    def unset_timer(self, idx):
         with self.rlock:
             del self.timeout_handlers[idx]
 
             self.cont = True
             self.pair[1].send(bytes(b'@'))
-
 
     def unset_error_handler(self, sock):
         with self.rlock:

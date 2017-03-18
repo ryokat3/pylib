@@ -167,10 +167,10 @@ class TimeoutTest(unittest.TestCase):
         #
         selectext = SelectExt()
         now = time.time()
-        idx1 = selectext.set_timeout_handler(0.5, event1.set)
-        idx2 = selectext.set_timeout_handler(0.6, event2.set)
-        idx3 = selectext.set_timeout_handler(0.7, event3.set)
-        idx4 = selectext.set_timeout_handler(0.8, event4.set)
+        idx1 = selectext.set_timer(0.5, event1.set)
+        idx2 = selectext.set_timer(0.6, event2.set)
+        idx3 = selectext.set_timer(0.7, event3.set)
+        idx4 = selectext.set_timer(0.8, event4.set)
 
         selectext.set_reader(self.csock, lambda:0)
         selectext.set_reader(self.ssock, \
@@ -203,7 +203,7 @@ class TimeoutTest(unittest.TestCase):
         self.assertTrue(checked)
         checked = False
 
-        selectext.unset_timeout_handler(idx3)
+        selectext.unset_timer(idx3)
 
         if event4.wait():
             event4.clear()

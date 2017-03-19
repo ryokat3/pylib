@@ -29,6 +29,7 @@ import abc
 import inspect
 import threading
 
+
 class Singleton(type):
 
     def __new__(cls, name, bases, dic):
@@ -50,7 +51,6 @@ class SingletonDict(type):
         dic['_instance_dict'] = {}
         dic['_instance_dict_lock'] = threading.Lock()
         return type.__new__(cls, name, bases, dic)
-
 
     def __call__(self, *args, **kwargs):
         if self._init_func != None:
@@ -100,6 +100,7 @@ class SingletonCleanup(ABCSingleton('SingletonCleanup', (object,), {})):
     @abc.abstractmethod
     def cleanup(self):
         pass
+
 
 ########################################################################
 # main
